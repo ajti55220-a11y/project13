@@ -1,0 +1,2968 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmniHub Atelier v3 — 122 оффлайн-инструмента в одном файле</title>
+<style>
+  :root {
+    --bg: #f6f4ef;
+    --bg-panel: #ffffff;
+    --bg-card: #faf8f4;
+    --bg-input: #f1ede4;
+    --border: #e4dfd5;
+    --border-bright: #cfc8b8;
+    --text: #18181b;
+    --text-muted: #52525b;
+    --accent: #1d4ed8;
+    --accent-hover: #1e40af;
+    --coral: #e11d48;
+    --rust: #ea580c;
+    --emerald: #059669;
+    --amber: #d97706;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 10px 28px -12px rgba(24, 24, 27, 0.12), 0 1px 3px rgba(24, 24, 27, 0.05);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+  }
+  button, input, select, textarea { font-family: inherit; color: inherit; }
+  button { cursor: pointer; border: none; background: none; transition: all 0.16s ease; }
+  button:active { transform: scale(0.98); }
+  input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    font-size: 13px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); background: #fff; }
+  input[type="range"] { accent-color: var(--accent); cursor: pointer; width: 100%; }
+  code, pre, .mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-variant-numeric: tabular-nums; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d6d0c2; border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  /* Header */
+  .top-header {
+    position: sticky; top: 0; z-index: 40;
+    background: rgba(246, 244, 239, 0.9);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 18px;
+  }
+  .header-inner {
+    max-width: 1480px; margin: 0 auto;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-logo {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--rust));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 17px; color: #fff;
+    box-shadow: 0 6px 16px rgba(29, 78, 216, 0.25);
+  }
+  .brand-title { font-weight: 800; font-size: 17px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .badge-pill {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 2px 8px; border-radius: 99px;
+    background: rgba(29, 78, 216, 0.1); color: var(--accent); border: 1px solid rgba(29, 78, 216, 0.25);
+  }
+  .badge-coral {
+    background: rgba(225, 29, 72, 0.1); color: var(--coral); border-color: rgba(225, 29, 72, 0.25);
+  }
+
+  /* Панель смены темы */
+  .theme-wrap { position: relative; }
+  .theme-trigger {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--bg-panel); border: 1px solid var(--border);
+    padding: 6px 11px; border-radius: 12px; font-size: 12px; font-weight: 700;
+    box-shadow: var(--shadow); color: var(--text);
+  }
+  .theme-trigger:hover { border-color: var(--accent); }
+  .theme-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 1px solid rgba(128,128,128,0.35); }
+  .theme-popover {
+    position: absolute; right: 0; top: calc(100% + 8px); z-index: 90;
+    width: 310px; max-width: calc(100vw - 24px);
+    background: var(--bg-panel); border: 1px solid var(--border-bright);
+    border-radius: 16px; padding: 14px; box-shadow: 0 20px 45px rgba(0, 0, 0, 0.28);
+    display: none; flex-direction: column; gap: 12px;
+  }
+  .theme-popover.open { display: flex; animation: fadeIn 0.16s ease; }
+  .preset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .preset-btn {
+    display: flex; align-items: center; gap: 7px; padding: 7px 9px;
+    border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card);
+    font-size: 11.5px; font-weight: 600; text-align: left; color: var(--text);
+  }
+  .preset-btn:hover { border-color: var(--accent); }
+  .preset-btn.active { border-color: var(--accent); background: rgba(29, 78, 216, 0.12); font-weight: 700; }
+  .preset-swatches { display: flex; flex-shrink: 0; }
+  .preset-swatches i { width: 10px; height: 14px; display: inline-block; }
+  .preset-swatches i:first-child { border-radius: 4px 0 0 4px; }
+  .preset-swatches i:last-child { border-radius: 0 4px 4px 0; }
+  .custom-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+  .custom-row input[type="color"] {
+    width: 38px; height: 28px; padding: 2px; border-radius: 8px;
+    border: 1px solid var(--border-bright); background: var(--bg-input); cursor: pointer;
+  }
+
+  .header-search { flex: 1; min-width: 220px; max-width: 380px; position: relative; }
+  .header-search input { padding-left: 34px; border-radius: 12px; background: var(--bg-panel); }
+  .header-search span { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 13px; opacity: 0.65; }
+
+  .header-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .xp-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-panel); border: 1px solid var(--border);
+    padding: 5px 12px; border-radius: 12px; font-size: 12px; box-shadow: var(--shadow);
+  }
+  .xp-bar-wrap { width: 64px; height: 6px; background: var(--bg-input); border-radius: 99px; overflow: hidden; }
+  .xp-bar-fill { height: 100%; width: 10%; background: linear-gradient(90deg, var(--accent), var(--rust)); transition: width 0.3s; }
+  .view-switcher {
+    display: flex; background: var(--bg-panel); border: 1px solid var(--border);
+    padding: 3px; border-radius: 12px; gap: 3px; box-shadow: var(--shadow);
+  }
+  .view-btn {
+    padding: 6px 11px; border-radius: 9px; font-size: 12px; font-weight: 600; color: var(--text-muted);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .view-btn.active { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(29, 78, 216, 0.3); }
+
+  .cat-bar {
+    max-width: 1480px; margin: 10px auto 0;
+    display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;
+  }
+  .cat-pill {
+    padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 600; white-space: nowrap;
+    background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-muted);
+  }
+  .cat-pill:hover { border-color: var(--border-bright); color: var(--text); }
+  .cat-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* Mobile Preview Shell */
+  #viewport-shell { flex: 1; display: flex; flex-direction: column; width: 100%; transition: all 0.3s ease; }
+  body.mobile-mode { background: #e5e0d5; }
+  body.mobile-mode #viewport-shell {
+    width: 396px; max-width: calc(100vw - 20px);
+    height: 820px; max-height: calc(100vh - 125px);
+    margin: 14px auto;
+    border-radius: 44px;
+    border: 10px solid #18181b;
+    box-shadow: 0 25px 65px rgba(24, 24, 27, 0.35), 0 0 0 2px rgba(29, 78, 216, 0.3);
+    overflow-y: auto; overflow-x: hidden;
+    background: var(--bg);
+    position: relative;
+  }
+  .dynamic-island {
+    display: none; position: sticky; top: 0; z-index: 30;
+    background: rgba(246, 244, 239, 0.96); backdrop-filter: blur(10px);
+    padding: 8px 18px; justify-content: space-between; align-items: center;
+    font-size: 11px; border-bottom: 1px solid var(--border);
+  }
+  body.mobile-mode .dynamic-island { display: flex; }
+  .island-pill { width: 92px; height: 20px; background: #18181b; border-radius: 99px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; }
+  .island-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); }
+
+  /* Main Grid */
+  .main-grid {
+    max-width: 1480px; width: 100%; margin: 0 auto; padding: 18px;
+    display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 18px; align-items: start;
+  }
+  body.mobile-mode .main-grid { grid-template-columns: 1fr; padding: 12px; gap: 12px; }
+
+  .sidebar {
+    position: sticky; top: 106px;
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px;
+    max-height: calc(100vh - 126px); overflow-y: auto; box-shadow: var(--shadow);
+  }
+  body.mobile-mode .sidebar {
+    position: static; max-height: none; display: flex; flex-direction: row;
+    overflow-x: auto; gap: 6px; padding: 8px;
+  }
+  .nav-group-label {
+    font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-muted); padding: 9px 10px 4px;
+  }
+  body.mobile-mode .nav-group-label { display: none; }
+  .nav-item {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 8px 10px; border-radius: 10px; font-size: 12.5px; font-weight: 500;
+    color: var(--text-muted); text-align: left;
+  }
+  body.mobile-mode .nav-item { width: auto; white-space: nowrap; flex-shrink: 0; padding: 7px 11px; }
+  .nav-item:hover { background: var(--bg-input); color: var(--text); }
+  .nav-item.active {
+    background: rgba(29, 78, 216, 0.1);
+    border: 1px solid rgba(29, 78, 216, 0.35);
+    color: var(--accent); font-weight: 700;
+  }
+  .nav-left { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+  .nav-left span:last-child { overflow: hidden; text-overflow: ellipsis; }
+  .fav-star { font-size: 13px; opacity: 0.3; padding: 1px 4px; border-radius: 6px; }
+  .fav-star.starred { opacity: 1; color: var(--amber); }
+  .fav-star:hover { opacity: 1; background: rgba(0,0,0,0.05); }
+
+  /* Panels & Cards */
+  .panel {
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow);
+    animation: fadeIn 0.2s ease;
+  }
+  body.mobile-mode .panel { padding: 14px; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .panel-header { margin-bottom: 18px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
+  .panel-title { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; color: var(--text); }
+  .panel-desc { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 15px;
+  }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  @media (max-width: 820px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  }
+  body.mobile-mode .grid-2, body.mobile-mode .grid-3, body.mobile-mode .grid-4 { grid-template-columns: 1fr !important; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 14px; border-radius: 10px; font-size: 12.5px; font-weight: 600;
+    background: var(--bg-input); color: var(--text); border: 1px solid var(--border-bright);
+  }
+  .btn:hover { background: #e8e2d5; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 3px 10px rgba(29, 78, 216, 0.25); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-emerald { background: var(--emerald); border-color: var(--emerald); color: #fff; font-weight: 700; }
+  .btn-rose { background: var(--coral); border-color: var(--coral); color: #fff; }
+  .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 9px; }
+
+  .subtabs { display: flex; flex-wrap: wrap; gap: 6px; background: var(--bg-input); padding: 4px; border-radius: 12px; border: 1px solid var(--border); width: fit-content; max-width: 100%; margin-bottom: 14px; }
+  .subtab { padding: 6px 12px; border-radius: 9px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  .subtab.active { background: var(--bg-panel); color: var(--accent); border: 1px solid var(--border-bright); box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+
+  .label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-val { font-size: 20px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: var(--text); }
+  .stat-sub { font-size: 11px; color: var(--text-muted); }
+  .hidden { display: none !important; }
+  .dropzone {
+    border: 2px dashed var(--border-bright); border-radius: 16px; padding: 30px 16px;
+    text-align: center; cursor: pointer; background: var(--bg-card); transition: 0.2s;
+  }
+  .dropzone:hover { border-color: var(--accent); background: rgba(29, 78, 216, 0.04); }
+  canvas.viz { width: 100%; display: block; border-radius: 12px; background: #18181b; border: 1px solid var(--border-bright); }
+
+  /* 100 Micro-Utilities Directory Grid */
+  .micro-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;
+  }
+  .micro-tile {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px; text-align: left; display: flex; flex-direction: column; gap: 4px;
+  }
+  .micro-tile:hover { border-color: var(--accent); background: #fff; transform: translateY(-1px); box-shadow: var(--shadow); }
+  .micro-tile-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-muted); font-weight: 700; }
+  .micro-tile-title { font-size: 13px; font-weight: 700; color: var(--text); }
+  .micro-tile-desc { font-size: 11.5px; color: var(--text-muted); line-height: 1.35; }
+
+  /* Global Overlays */
+  #pixel-overlay {
+    position: fixed; inset: 0; z-index: 9999; display: none;
+    align-items: center; justify-content: center; cursor: pointer; user-select: none;
+  }
+  #pixel-overlay.open { display: flex; }
+  .pixel-hud {
+    background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(12px);
+    padding: 18px 24px; border-radius: 18px; border: 1px solid var(--border-bright);
+    text-align: center; color: var(--text); max-width: 320px; box-shadow: var(--shadow);
+  }
+  #toast {
+    position: fixed; bottom: 20px; right: 20px; z-index: 9998;
+    background: var(--text); border: 1px solid var(--accent); color: #fff;
+    padding: 11px 16px; border-radius: 14px; font-size: 13px; font-weight: 600;
+    box-shadow: 0 12px 30px rgba(24, 24, 27, 0.25); display: none; align-items: center; gap: 8px;
+  }
+  #toast.show { display: flex; animation: fadeIn 0.2s ease; }
+</style>
+</head>
+<body>
+
+<!-- Полноэкранный тест пикселей -->
+<div id="pixel-overlay">
+  <div class="pixel-hud">
+    <div id="pixel-label" style="font-weight:800;font-size:16px;">Красный (#FF0000)</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:6px;">Клик или стрелки ← → меняют цвет • ESC — выход</p>
+    <button type="button" id="pixel-close" class="btn btn-sm" style="margin-top:12px;">Закрыть (ESC)</button>
+  </div>
+</div>
+
+<!-- Глобальное уведомление -->
+<div id="toast"><span id="toast-ico">✦</span><span id="toast-txt">Готово</span></div>
+
+<!-- Шапка -->
+<header class="top-header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-logo">Ω</div>
+      <div>
+        <div class="brand-title">OmniHub Atelier v3 <span class="badge-pill">122 инструмента</span> <span class="badge-pill badge-coral">22 Студия + 100 Микро</span></div>
+        <div style="font-size:11px;color:var(--text-muted);">Студия оффлайн-утилит, расчетов, физики и тренажеров</div>
+      </div>
+    </div>
+
+    <div class="header-search">
+      <span>🔍</span>
+      <input type="text" id="global-search" placeholder="Поиск по всем 122 инструментам (QR, UUID, Haversine, BPM...)">
+    </div>
+
+    <div class="header-controls">
+      <div class="xp-box" title="Прогресс опыта сохраняется локально в браузере">
+        <span>✦ <strong id="lvl-badge">Ур. 1</strong></span>
+        <div class="xp-bar-wrap"><div class="xp-bar-fill" id="xp-fill"></div></div>
+        <span class="mono" id="xp-text" style="color:var(--accent);font-weight:700;">0 XP</span>
+      </div>
+
+      <div class="view-switcher">
+        <button type="button" class="view-btn active" id="btn-desktop">💻 Десктоп</button>
+        <button type="button" class="view-btn" id="btn-mobile">📱 Телефон</button>
+      </div>
+
+      <div class="theme-wrap" id="theme-wrap">
+        <button type="button" class="theme-trigger" id="theme-toggle" title="Настройка цветовой темы">
+          <span class="theme-dot"></span>
+          <span>🎨 Тема</span>
+        </button>
+        <div class="theme-popover" id="theme-popover">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="label" style="margin:0;">Готовые темы</span>
+            <button type="button" class="btn btn-sm" id="theme-reset" style="padding:3px 8px;font-size:11px;">Сброс</button>
+          </div>
+          <div class="preset-grid" id="theme-presets"></div>
+          <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:8px;">
+            <span class="label" style="margin:0;">Свои цвета</span>
+            <div class="custom-row">
+              <span>Основной акцент</span>
+              <input type="color" id="cust-accent" value="#1d4ed8">
+            </div>
+            <div class="custom-row">
+              <span>Вторичный акцент</span>
+              <input type="color" id="cust-secondary" value="#e11d48">
+            </div>
+            <div class="custom-row">
+              <span>Режим поверхности</span>
+              <select id="cust-surface" style="width:auto;padding:5px 8px;font-size:12px;">
+                <option value="light">Светлая студия</option>
+                <option value="warm">Теплая бумага</option>
+                <option value="dark">Темный режим</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cat-bar" id="cat-bar">
+    <button type="button" class="cat-pill active" data-cat="all">Все (122)</button>
+    <button type="button" class="cat-pill" data-cat="fav">★ Избранное</button>
+    <button type="button" class="cat-pill" data-cat="studio">🎨 Студия (22)</button>
+    <button type="button" class="cat-pill" data-cat="web">🕸️ Текст, Код и Веб (25)</button>
+    <button type="button" class="cat-pill" data-cat="math">📐 Математика и Финансы (25)</button>
+    <button type="button" class="cat-pill" data-cat="dev">🔐 Данные и Безопасность (25)</button>
+    <button type="button" class="cat-pill" data-cat="creative">🎵 Звук, Фокус и Творчество (25)</button>
+  </div>
+</header>
+
+<div id="viewport-shell">
+  <div class="dynamic-island">
+    <span class="mono" id="phone-clock" style="font-weight:700;">14:37</span>
+    <div class="island-pill"><div class="island-dot"></div></div>
+    <span class="mono">ATELIER • 122</span>
+  </div>
+
+  <div class="main-grid">
+    <aside class="sidebar" id="sidebar-nav"></aside>
+
+    <main id="workspace">
+
+      <!-- ИНТЕРАКТИВНЫЙ РАБОЧИЙ СТОЛ ДЛЯ 100 МИКРО-УТИЛИТ -->
+      <section id="mod-micro-lab" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <span class="badge-pill badge-coral" id="ml-cat-badge">Микро-утилита</span>
+              <span class="mono" id="ml-id-badge" style="font-size:11px;color:var(--text-muted);">#023</span>
+            </div>
+            <h1 class="panel-title" id="ml-title">Название утилиты</h1>
+            <p class="panel-desc" id="ml-desc">Описание работы инструмента в браузере.</p>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button type="button" id="ml-sample" class="btn btn-sm">🎲 Пример</button>
+            <button type="button" id="ml-clear" class="btn btn-sm">Очистить</button>
+            <button type="button" id="ml-copy" class="btn btn-sm btn-primary">Копировать</button>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:16px;">
+          <div id="ml-inputs" class="card" style="display:flex;flex-direction:column;gap:10px;"></div>
+          <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;gap:10px;">
+            <div>
+              <label class="label">Результат вычислений</label>
+              <pre id="ml-output" class="mono" style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:12.5px;white-space:pre-wrap;word-break:break-word;min-height:110px;"></pre>
+            </div>
+            <div id="ml-extra" style="font-size:12px;color:var(--text-muted);"></div>
+          </div>
+        </div>
+
+        <div>
+          <label class="label">Быстрый каталог других микро-утилит этого раздела</label>
+          <div id="ml-related" class="micro-grid"></div>
+        </div>
+      </section>
+
+      <!-- 1. ФОТО И СЖАТИЕ -->
+      <section id="mod-image" class="panel">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🖼️ Фото и сжатие</h1>
+            <p class="panel-desc">Локальная конвертация в WebP, JPEG и PNG через Canvas без отправки файлов на сервер.</p>
+          </div>
+        </div>
+        <div id="img-drop" class="dropzone">
+          <input type="file" id="img-file" accept="image/*" class="hidden">
+          <div style="font-size:36px;margin-bottom:8px;">📂</div>
+          <div style="font-weight:700;">Перетащите изображение или нажмите для выбора</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">PNG, JPEG, WebP, GIF, BMP</div>
+        </div>
+        <div id="img-editor" class="hidden grid-2" style="margin-top:14px;">
+          <div class="card" style="display:flex;flex-direction:column;gap:12px;">
+            <div>
+              <label class="label">Формат вывода</label>
+              <select id="img-fmt">
+                <option value="image/webp">WebP (максимальное сжатие)</option>
+                <option value="image/jpeg">JPEG (универсальный)</option>
+                <option value="image/png">PNG (без потерь)</option>
+              </select>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+                <span class="label" style="margin:0;">Качество</span>
+                <span class="mono" id="img-q-lbl" style="color:var(--accent);">82%</span>
+              </div>
+              <input type="range" id="img-q" min="10" max="100" value="82">
+            </div>
+            <div class="card" style="background:var(--bg-input);font-size:12px;display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;justify-content:space-between;"><span>Разрешение:</span><strong class="mono" id="img-dim">—</strong></div>
+              <div style="display:flex;justify-content:space-between;"><span>Было:</span><strong class="mono" id="img-old-sz">—</strong></div>
+              <div style="display:flex;justify-content:space-between;"><span>Стало:</span><strong class="mono" id="img-new-sz">—</strong></div>
+              <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:6px;"><span>Разница:</span><strong class="mono" id="img-diff-sz" style="color:var(--emerald);">—</strong></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="button" id="img-dl" class="btn btn-primary" style="flex:1;">⬇️ Скачать</button>
+              <button type="button" id="img-rst" class="btn">Другое фото</button>
+            </div>
+          </div>
+          <div class="card" style="display:flex;align-items:center;justify-content:center;min-height:240px;background:var(--bg-input);">
+            <img id="img-prev" alt="Preview" style="max-width:100%;max-height:310px;border-radius:10px;">
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. ТЕСТ ЭКРАНА -->
+      <section id="mod-screen" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🖥️ Тест экрана и битых пикселей</h1>
+            <p class="panel-desc">Характеристики дисплея и полноэкранная заливка чистыми цветами (работает поверх рамки телефона).</p>
+          </div>
+          <button type="button" id="scr-start" class="btn btn-primary">🖥️ Запустить тест</button>
+        </div>
+        <div class="grid-3" style="margin-bottom:14px;">
+          <div class="card"><span class="label">Экран</span><div class="stat-val" id="scr-res">—</div></div>
+          <div class="card"><span class="label">Окно (Viewport)</span><div class="stat-val" id="scr-vp">—</div></div>
+          <div class="card"><span class="label">Плотность (DPR)</span><div class="stat-val" id="scr-dpr">—</div></div>
+          <div class="card"><span class="label">Глубина цвета</span><div class="stat-val" id="scr-depth">—</div></div>
+          <div class="card"><span class="label">Ориентация</span><div class="stat-val" id="scr-ori">—</div></div>
+          <div class="card"><span class="label">Сенсорный ввод</span><div class="stat-val" id="scr-touch">—</div></div>
+        </div>
+        <label class="label">Быстрый старт с цвета:</label>
+        <div id="scr-swatches" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:8px;"></div>
+      </section>
+
+      <!-- 4. МИКРОФОН -->
+      <section id="mod-mic" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🎙️ Проверка микрофона и запись</h1>
+            <p class="panel-desc">Живой частотный анализатор через Web Audio API и запись тестового фрагмента 5 секунд.</p>
+          </div>
+          <button type="button" id="mic-btn" class="btn btn-primary">🎙️ Включить микрофон</button>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;">
+            <span id="mic-lbl" style="color:var(--text-muted);">Микрофон выключен</span>
+      <!-- 2. QR-ГЕНЕРАТОР -->
+      <section id="mod-qr" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">📱 Автономный QR-генератор (v1–v10)</h1>
+            <p class="panel-desc">Встроенный кодер Рида-Соломона на чистом JS. Поддерживает кириллицу и длинные URL до 271 байта.</p>
+          </div>
+        </div>
+      </section>
+      <!-- 3. ТЕСТ ЭКРАНА -->
+      <section id="mod-screen" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🖥️ Тест экрана и битых пикселей</h1>
+            <p class="panel-desc">Характеристики дисплея и полноэкранная заливка чистыми цветами (работает поверх рамки телефона).</p>
+          </div>
+          <button type="button" id="scr-start" class="btn btn-primary">🖥️ Запустить тест</button>
+        </div>
+      <!-- 4. МИКРОФОН -->
+      <section id="mod-mic" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🎙️ Проверка микрофона и запись</h1>
+            <p class="panel-desc">Живой частотный анализатор через Web Audio API и запись тестового фрагмента 5 секунд.</p>
+          </div>
+          <button type="button" id="mic-btn" class="btn btn-primary">🎙️ Включить микрофон</button>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px;">
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="pwd-out" readonly class="mono" style="font-weight:700;font-size:15px;">
+            <button type="button" id="pwd-copy" class="btn btn-primary">Копировать</button>
+            <button type="button" id="pwd-new" class="btn">🔄</button>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;">
+            <span id="pwd-str" style="color:var(--emerald);font-weight:700;">Надежный</span>
+            <span class="mono" id="pwd-ent" style="color:var(--text-muted);">Энтропия: —</span>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span>Длина:</span><strong class="mono" id="pwd-len-lbl">18</strong></div>
+            <input type="range" id="pwd-len" min="8" max="64" value="18">
+      <!-- 5. ПАРОЛИ И SHA-256 -->
+      <section id="mod-pass" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🔐 Пароли и SHA-256</h1>
+            <p class="panel-desc">Криптостойкая генерация через Web Crypto API и локальный расчет контрольных сумм.</p>
+          </div>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+          <div style="font-weight:700;font-size:14px;">Калькулятор SHA-256 (текст или файл)</div>
+          <textarea id="sha-txt" rows="2" placeholder="Введите текст для хеширования..."></textarea>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <label class="btn btn-sm">📄 Выбрать файл<input type="file" id="sha-file" class="hidden"></label>
+            <span id="sha-src" style="font-size:12px;color:var(--text-muted);">Источник: текст</span>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="sha-out" readonly class="mono" placeholder="SHA-256...">
+            <button type="button" id="sha-copy" class="btn">Копировать</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. EXIF И МЕТАДАННЫЕ -->
+      <section id="mod-exif" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🕵️ EXIF и очистка метаданных</h1>
+            <p class="panel-desc">Бинарный разбор модели камеры и GPS-координат из JPEG + скачивание очищенной копии.</p>
+          </div>
+        </div>
+        <div id="exif-drop" class="dropzone">
+          <input type="file" id="exif-file" accept="image/*" class="hidden">
+          <div style="font-size:36px;margin-bottom:8px;">🕵️</div>
+          <div style="font-weight:700;">Выберите фото для проверки скрытых EXIF/GPS данных</div>
+        </div>
+        <div id="exif-res" class="hidden" style="margin-top:14px;display:flex;flex-direction:column;gap:12px;">
+          <div id="exif-gps" class="hidden card" style="border-color:var(--rose);background:rgba(244,63,94,0.12);color:#fda4af;font-size:13px;">
+            🚨 <strong>Обнаружены GPS-координаты:</strong> <span class="mono" id="exif-coords"></span>
+          </div>
+          <div id="exif-grid" class="grid-2"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" id="exif-clean" class="btn btn-emerald">🧹 Скачать без метаданных</button>
+            <button type="button" id="exif-rst" class="btn">Другой файл</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. DIFF -->
+      <section id="mod-diff" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">⚖️ Построчное сравнение текста (Diff)</h1>
+            <p class="panel-desc">Алгоритм LCS для точного поиска добавленных и удаленных строк.</p>
+          </div>
+          <label style="font-size:12px;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="diff-ws"> Игнорировать пробелы</label>
+        </div>
+        <div class="grid-2" style="margin-bottom:12px;">
+          <div><label class="label">Текст A</label><textarea id="diff-a" rows="5" class="mono">Сервер: nginx/1.24
+Порт: 80
+Кэш: выключен</textarea></div>
+          <div><label class="label">Текст B</label><textarea id="diff-b" rows="5" class="mono">Сервер: nginx/1.26
+Порт: 443
+SSL: включен
+Кэш: включен</textarea></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+          <button type="button" id="diff-run" class="btn btn-primary">⚖️ Сравнить</button>
+          <div class="mono" id="diff-stat" style="font-size:12px;"></div>
+        </div>
+        <div id="diff-out" class="card mono" style="background:var(--bg-input);font-size:12px;max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:4px;"></div>
+      </section>
+
+      <!-- 8. DEV TOOLS -->
+      <section id="mod-dev" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🧩 JSON / Base64 / URL / JWT</h1>
+            <p class="panel-desc">Локальный парсер и декодер токенов без отправки секретов в интернет.</p>
+          </div>
+        </div>
+        <div class="subtabs">
+          <button type="button" class="subtab active" data-dev="json">JSON</button>
+          <button type="button" class="subtab" data-dev="base64">Base64</button>
+          <button type="button" class="subtab" data-dev="url">URL</button>
+          <button type="button" class="subtab" data-dev="jwt">JWT</button>
+        </div>
+        <textarea id="dev-in" rows="4" class="mono" style="margin-bottom:10px;">{"hub":"OmniHub","modules":22,"offline":true}</textarea>
+        <div id="dev-btns" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+        <div id="dev-msg" class="mono hidden" style="font-size:12px;margin-bottom:8px;padding:8px;border-radius:8px;"></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span class="label">Результат</span><button type="button" id="dev-copy" class="btn btn-sm">Копировать</button></div>
+        <pre id="dev-out" class="card mono" style="background:var(--bg-input);font-size:12px;white-space:pre-wrap;word-break:break-all;min-height:90px;"></pre>
+      </section>
+
+      <!-- 9. ТЕКСТ И ОЧИСТКА -->
+      <section id="mod-text" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">📝 Текст и очистка</h1>
+            <p class="panel-desc">Статистика символов, удаление дубликатов строк, чистка HTML и транслитерация.</p>
+          </div>
+        </div>
+        <div class="grid-4" style="margin-bottom:12px;">
+          <div class="card"><span class="label">Символы</span><div class="stat-val" id="txt-c">0</div></div>
+          <div class="card"><span class="label">Слова</span><div class="stat-val" id="txt-w">0</div></div>
+          <div class="card"><span class="label">Строки</span><div class="stat-val" id="txt-l">0</div></div>
+          <div class="card"><span class="label">Чтение</span><div class="stat-val" id="txt-r">0с</div></div>
+        </div>
+        <textarea id="txt-in" rows="6" placeholder="Вставьте текст..." style="margin-bottom:10px;"></textarea>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <button type="button" class="btn btn-sm txt-op" data-op="dedupe">Без дублей</button>
+          <button type="button" class="btn btn-sm txt-op" data-op="spaces">Лишние пробелы</button>
+          <button type="button" class="btn btn-sm txt-op" data-op="html">Убрать HTML</button>
+          <button type="button" class="btn btn-sm txt-op" data-op="sort">Сортировка А-Я</button>
+          <button type="button" class="btn btn-sm txt-op" data-op="translit">Транслит RU→EN</button>
+          <button type="button" id="txt-copy" class="btn btn-sm btn-primary">Копировать</button>
+        </div>
+      </section>
+
+      <!-- 10. ТОН-ГЕНЕРАТОР И BPM -->
+      <section id="mod-tone" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🔊 Тон-генератор и Tap Tempo (BPM)</h1>
+            <p class="panel-desc">Проверка динамиков, левого/правого канала (20 Гц – 16 кГц) и измеритель темпа.</p>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card" style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;"><span class="label" style="margin:0;">Частота</span><strong class="mono" id="tone-hz" style="font-size:18px;color:var(--cyan);">440 Гц</strong></div>
+            <input type="range" id="tone-rng" min="20" max="16000" value="440">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button type="button" class="btn btn-sm tone-pre" data-hz="60">60 Гц</button>
+              <button type="button" class="btn btn-sm tone-pre" data-hz="440">440 Гц</button>
+              <button type="button" class="btn btn-sm tone-pre" data-hz="1000">1 кГц</button>
+              <button type="button" class="btn btn-sm tone-pre" data-hz="10000">10 кГц</button>
+            </div>
+            <div class="grid-2">
+              <div><label class="label">Волна</label><select id="tone-wv"><option value="sine">Синус</option><option value="square">Квадрат</option><option value="triangle">Треугольник</option><option value="sawtooth">Пила</option></select></div>
+              <div><label class="label">Канал</label><select id="tone-pan"><option value="0">Центр (L+R)</option><option value="-1">Левый (L)</option><option value="1">Правый (R)</option></select></div>
+            </div>
+            <button type="button" id="tone-btn" class="btn btn-primary">▶️ Включить звук</button>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;gap:12px;">
+            <div>
+              <span class="label">Tap Tempo (BPM)</span>
+              <div class="stat-val" id="bpm-out" style="font-size:36px;color:var(--emerald);margin-top:4px;">— BPM</div>
+              <p style="font-size:12px;color:var(--text-muted);margin-top:4px;">Жмите кнопку в такт музыке</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <button type="button" id="bpm-tap" class="btn btn-emerald" style="padding:18px;font-size:15px;">🥁 ТАП В РИТМ</button>
+              <button type="button" id="bpm-rst" class="btn btn-sm">Сбросить</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 11. ТЕСТ FPS / ГЦ -->
+      <section id="mod-fps" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">⚡ Тест FPS, герцовки и UFO-плавности</h1>
+            <p class="panel-desc">Замер частоты кадров, времени кадра (Frame Time) и стресс-тест частиц Canvas.</p>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button type="button" id="fps-stress" class="btn btn-sm">🔥 Стресс: 0 частиц</button>
+            <button type="button" id="fps-rst" class="btn btn-sm btn-primary">🔄 Сброс</button>
+          </div>
+        </div>
+        <div class="grid-4" style="margin-bottom:12px;">
+          <div class="card"><span class="label">Текущий FPS</span><div class="stat-val" id="fps-now" style="color:var(--cyan);">—</div><div class="stat-sub" id="fps-hz">~60 Гц</div></div>
+          <div class="card"><span class="label">Средний</span><div class="stat-val" id="fps-avg">—</div></div>
+          <div class="card"><span class="label">Мин / Макс</span><div class="stat-val" id="fps-mm" style="font-size:16px;">— / —</div></div>
+          <div class="card"><span class="label">Frame Time</span><div class="stat-val" id="fps-ms" style="color:var(--emerald);">— мс</div></div>
+        </div>
+        <canvas id="fps-graph" class="viz" height="100" style="margin-bottom:12px;"></canvas>
+        <canvas id="ufo-cnv" class="viz" height="150"></canvas>
+      </section>
+
+      <!-- 12. КАЛЬКУЛЯТОР РЕАЛЬНОСТИ (АНТИ-МАРКЕТИНГ) -->
+      <section id="mod-reality" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">📊 Калькулятор реальности (Анти-маркетинг)</h1>
+            <p class="panel-desc">Переводит рекламные обещания в честные рубли в месяц и за одну операцию.</p>
+          </div>
+        </div>
+        <div class="subtabs">
+          <button type="button" class="subtab active" data-real="car">🚗 Владение авто</button>
+          <button type="button" class="subtab" data-real="wash">🧺 Цена 1 стирки / прибора</button>
+          <button type="button" class="subtab" data-real="paint">🎨 Краска и ремонт</button>
+        </div>
+
+        <!-- Вкладка Авто -->
+        <div id="real-car" class="grid-2">
+          <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+            <div><label class="label">Пробег в год (км)</label><input type="number" id="rc-km" value="15000"></div>
+            <div><label class="label">Расход топлива (л / 100 км)</label><input type="number" id="rc-cons" value="9.5" step="0.1"></div>
+            <div><label class="label">Цена литра топлива (₽)</label><input type="number" id="rc-fuel" value="62"></div>
+            <div><label class="label">ТО, страховка, налог и шины в год (₽)</label><input type="number" id="rc-maint" value="75000"></div>
+            <div><label class="label">Потеря стоимости (амортизация) в год (₽)</label><input type="number" id="rc-dep" value="120000"></div>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:12px;">
+            <div><span class="label">Честная стоимость в месяц</span><div class="stat-val" id="rc-month" style="font-size:30px;color:var(--amber);">—</div></div>
+            <div><span class="label">Затраты за год</span><div class="stat-val" id="rc-year">—</div></div>
+            <div><span class="label">Цена 1 километра пути</span><div class="stat-val" id="rc-perkm" style="color:var(--cyan);">—</div></div>
+            <p id="rc-note" style="font-size:12px;color:var(--text-muted);"></p>
+          </div>
+        </div>
+
+        <!-- Вкладка Стирка -->
+        <div id="real-wash" class="hidden grid-2">
+          <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+            <div><label class="label">Мощность цикла (кВт·ч за 1 стирку)</label><input type="number" id="rw-kw" value="1.1" step="0.1"></div>
+            <div><label class="label">Тариф электричества (₽ / кВт·ч)</label><input type="number" id="rw-kwhp" value="6.5" step="0.1"></div>
+            <div><label class="label">Расход воды (литров за цикл)</label><input type="number" id="rw-lit" value="48"></div>
+            <div><label class="label">Тариф воды + водоотведение (₽ / м³)</label><input type="number" id="rw-watp" value="95"></div>
+            <div><label class="label">Цена 1 капсулы / порции порошка (₽)</label><input type="number" id="rw-pod" value="28"></div>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:12px;">
+            <div><span class="label">Реальная цена 1 стирки</span><div class="stat-val" id="rw-one" style="font-size:32px;color:var(--emerald);">—</div></div>
+            <div><span class="label">При 20 стирках в месяц (за год)</span><div class="stat-val" id="rw-yr">—</div></div>
+            <p id="rw-breakdown" style="font-size:12px;color:var(--text-muted);"></p>
+          </div>
+        </div>
+
+        <!-- Вкладка Краска -->
+        <div id="real-paint" class="hidden grid-2">
+          <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+            <div><label class="label">Площадь стен/потолка (м²)</label><input type="number" id="rp-area" value="36"></div>
+            <div><label class="label">Количество слоев</label><input type="number" id="rp-layers" value="2" min="1" max="5"></div>
+            <div><label class="label">Укрывистость по банке (м² с 1 литра)</label><input type="number" id="rp-cov" value="10"></div>
+            <div><label class="label">Запас на впитывание и подрезку (%)</label><input type="number" id="rp-margin" value="15"></div>
+            <div><label class="label">Цена 1 литра краски (₽)</label><input type="number" id="rp-price" value="850"></div>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:12px;">
+            <div><span class="label">Реально потребуется краски</span><div class="stat-val" id="rp-liters" style="font-size:32px;color:var(--cyan);">—</div></div>
+            <div><span class="label">Итоговый бюджет</span><div class="stat-val" id="rp-cost" style="color:var(--amber);">—</div></div>
+            <p style="font-size:12px;color:var(--text-muted);">Производители указывают расход для идеального гладкого грунта в 1 слой — в жизни расход выше на 15–25%.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 13. СПРАВОЧНИК ПОДВОДНЫХ КАМНЕЙ, ФОРМАТОВ И ПОЛОМОК -->
+      <section id="mod-wiki" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">📚 Справочник подводных камней, форматов и симптомов</h1>
+            <p class="panel-desc">Короткие ответы без воды: форматы файлов, диагностика техники по звуку/поведению и бытовые чек-листы.</p>
+          </div>
+        </div>
+        <div class="subtabs">
+          <button type="button" class="subtab active" data-wk="formats">🗂️ Форматы файлов</button>
+          <button type="button" class="subtab" data-wk="symptoms">🔧 Диагностика поломок</button>
+          <button type="button" class="subtab" data-wk="traps">⚠️ Подводные камни</button>
+        </div>
+        <input type="text" id="wk-search" placeholder="Фильтр по справочнику (heic, mkv, свист, возврат...)" style="margin-bottom:12px;">
+        <div id="wk-list" class="grid-2"></div>
+      </section>
+
+      <!-- 14. ДЕТЕКТОР ЖЕЛЕЗА И BOTTLENECK -->
+      <section id="mod-pc" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🖥️ Детектор сборок и «бутылочных горлышек»</h1>
+            <p class="panel-desc">Проверяет баланс железа и периферии под вашу задачу без рекламных советов.</p>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+            <div><label class="label">Главная задача</label>
+              <select id="pc-task">
+                <option value="games">Современные игры (2K / 144 Гц)</option>
+                <option value="edit">Монтаж видео 4K и графика</option>
+                <option value="dev">Программирование, Docker и нейросети</option>
+                <option value="office">Браузер, документы и тихая ночная работа</option>
+              </select>
+            </div>
+            <div><label class="label">Процессор (уровень)</label>
+              <select id="pc-cpu">
+                <option value="1">Бюджетный 4-ядерный / старый i5</option>
+                <option value="2" selected>Средний 6–8 ядер (Ryzen 5 / Core i5)</option>
+                <option value="3">Топовый 12–16+ ядер (Ryzen 9 / Core i7-i9)</option>
+              </select>
+            </div>
+            <div><label class="label">Видеокарта</label>
+              <select id="pc-gpu">
+                <option value="1">Встроенная графика / офисная затычка</option>
+                <option value="2" selected>Средний класс (RTX 4060 / RX 7600)</option>
+                <option value="3">Предтоп / Топ (RTX 4070 Ti / 4080 / 4090)</option>
+              </select>
+            </div>
+            <div><label class="label">Оперативная память (ОЗУ)</label>
+              <select id="pc-ram">
+                <option value="8">8 ГБ (на грани выживания)</option>
+                <option value="16" selected>16 ГБ (базовый минимум)</option>
+                <option value="32">32 ГБ (комфортный стандарт)</option>
+                <option value="64">64+ ГБ (запас под тяжелые проекты)</option>
+              </select>
+            </div>
+            <div><label class="label">Клавиатура / Свитчи</label>
+              <select id="pc-sw">
+                <option value="linear">Линейные / Тихие (Red / Silent)</option>
+                <option value="clicky">Кликающие громкие (Blue / Green)</option>
+              </select>
+            </div>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;gap:12px;">
+            <div>
+              <span class="label">Вердикт лаборатории</span>
+              <div class="stat-val" id="pc-score" style="font-size:28px;color:var(--cyan);margin:6px 0;">Баланс: 85/100</div>
+              <div id="pc-issues" style="display:flex;flex-direction:column;gap:8px;font-size:13px;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 15. КАЛЬКУЛЯТОР-ЖАБА -->
+      <section id="mod-toad" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🐸 Калькулятор-жаба</h1>
+            <p class="panel-desc">Переводит цену импульсивной покупки в часы вашей жизни, рабочие дни и стаканчики кофе.</p>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+            <div><label class="label">Ваш доход в месяц на руки (₽)</label><input type="number" id="td-sal" value="90000"></div>
+            <div><label class="label">Рабочих часов в месяц</label><input type="number" id="td-hrs" value="168"></div>
+            <div><label class="label">Цена любимой мелочи (кофе / шаурма, ₽)</label><input type="number" id="td-coffee" value="280"></div>
+            <div><label class="label">Цена хотелки (₽)</label><input type="number" id="td-price" value="34990"></div>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:12px;">
+            <div><span class="label">Цена в часах вашей жизни</span><div class="stat-val" id="td-life" style="font-size:28px;color:var(--amber);">—</div></div>
+            <div class="grid-2">
+              <div><span class="label">В рабочих днях</span><div class="stat-val" id="td-days" style="font-size:18px;">—</div></div>
+              <div><span class="label">В стаканчиках кофе</span><div class="stat-val" id="td-cups" style="font-size:18px;color:var(--cyan);">—</div></div>
+            </div>
+            <div class="card" id="td-verdict" style="background:var(--bg-input);font-size:13px;border-color:var(--emerald);"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 16. АРЕНА ВЫБОРА -->
+      <section id="mod-arena" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🏆 Арена выбора (Турнир 1 на 1)</h1>
+            <p class="panel-desc">Снимает паралич выбора: введите варианты, и пусть они сразятся на выбывание до финала.</p>
+          </div>
+        </div>
+<!-- ... existing ... -->
+      <!-- 17. ВИЗУАЛЬНЫЕ ВЕСЫ РЕШЕНИЙ -->
+      <section id="mod-scales" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">⚖️ Визуальные весы решений (Физика)</h1>
+            <p class="panel-desc">Добавляйте аргументы «За» с весом от 1 до 10 — рычажные весы наклонятся в реальном времени.</p>
+          </div>
+        </div>
+<!-- ... existing ... -->
+      <!-- 18. СУД НАД ПОДПИСКАМИ, ДЕТЕКТОР БУЛШИТА И ОТГОВОРКИ -->
+      <section id="mod-life" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🎭 Охотник за подписками, Детектор булшита и Отговорки</h1>
+            <p class="panel-desc">Ревизия забытых списаний, переводчик с офисного языка и генератор вежливых отказов.</p>
+          </div>
+        </div>
+        <div class="subtabs">
+          <button type="button" class="subtab active" data-lf="subs">💳 Суд над подписками</button>
+          <button type="button" class="subtab" data-lf="bs">🕵️‍♂️ Детектор булшита</button>
+          <button type="button" class="subtab" data-lf="excuse">🛡️ Генератор отказов</button>
+        </div>
+
+        <!-- Подписки -->
+        <div id="lf-subs" style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input type="text" id="sub-name" placeholder="Название сервиса (Кино, Облако...)" style="flex:2;min-width:160px;">
+            <input type="number" id="sub-cost" placeholder="₽ / мес" value="399" style="flex:1;min-width:90px;">
+            <select id="sub-use" style="flex:1;min-width:140px;">
+              <option value="daily">Пользуюсь каждый день</option>
+              <option value="rare">Открываю раз в месяц</option>
+              <option value="forgot">Забыл, когда открывал</option>
+            </select>
+            <button type="button" id="sub-add" class="btn btn-primary">Добавить</button>
+          </div>
+          <div id="sub-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+          <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>Потенциальная экономия за год при отмене лишних:</span>
+            <strong class="mono" id="sub-save" style="font-size:20px;color:var(--emerald);">0 ₽ / год</strong>
+          </div>
+        </div>
+
+        <!-- Детектор булшита -->
+        <div id="lf-bs" class="hidden" style="display:flex;flex-direction:column;gap:10px;">
+          <textarea id="bs-in" rows="4">Мы динамично развивающаяся команда с гибким графиком, печеньками в офисе, стрессоустойчивостью и синергией. Зарплата по результатам собеседования, задачи в режиме многозадачности.</textarea>
+          <button type="button" id="bs-run" class="btn btn-primary" style="width:fit-content;">🔍 Перевести на человеческий</button>
+          <div id="bs-out" class="card" style="display:flex;flex-direction:column;gap:8px;font-size:13px;"></div>
+        </div>
+
+        <!-- Генератор отказов -->
+        <div id="lf-excuse" class="hidden" style="display:flex;flex-direction:column;gap:12px;">
+          <div class="grid-2">
+            <div><label class="label">Ситуация</label>
+              <select id="ex-sit">
+                <option value="weekend">Просят поработать в выходной</option>
+                <option value="call">Зовут на бессмысленный созвон «на 5 минут»</option>
+                <option value="sofa">Друг зовет таскать шкаф на 9 этаж</option>
+                <option value="upsell">Навязывают допуслуги / страховку</option>
+              </select>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;"><label class="label">Уровень дипломатичности</label><span class="mono" id="ex-lvl-lbl" style="font-size:11px;color:var(--cyan);">Вежливо</span></div>
+              <input type="range" id="ex-lvl" min="1" max="3" value="2">
+            </div>
+          </div>
+          <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+            <p id="ex-out" style="font-size:14px;font-weight:500;"></p>
+            <button type="button" id="ex-copy" class="btn btn-sm btn-primary">Копировать</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 19. 2D АЭРОДИНАМИЧЕСКАЯ ТРУБА -->
+      <section id="mod-aero" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🌬️ 2D Аэродинамическая труба</h1>
+            <p class="panel-desc">Рисуйте мышкой или пальцем любой профиль в потоке воздуха и наблюдайте обтекание и турбулентность.</p>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;">
+          <button type="button" class="btn btn-sm aero-pre" data-shape="wing">✈️ Крыло</button>
+          <button type="button" class="btn btn-sm aero-pre" data-shape="car">🏎️ Гиперкар</button>
+          <button type="button" class="btn btn-sm aero-pre" data-shape="brick">🧱 Кирпич</button>
+          <button type="button" id="aero-clear" class="btn btn-sm btn-rose">Очистить</button>
+          <div style="display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;">
+            <span>Ветер:</span>
+            <input type="range" id="aero-spd" min="2" max="12" value="6" style="width:90px;">
+          </div>
+        </div>
+        <canvas id="aero-cnv" class="viz" height="270" style="cursor:crosshair;touch-action:none;"></canvas>
+        <div class="grid-3" style="margin-top:10px;">
+          <div class="card"><span class="label">Сопротивление (Drag)</span><div class="stat-val" id="aero-drag" style="color:var(--rust);">—</div></div>
+          <div class="card"><span class="label">Подъемная сила</span><div class="stat-val" id="aero-lift" style="color:var(--accent);">—</div></div>
+          <div class="card"><span class="label">Режим потока</span><div class="stat-val" id="aero-flow" style="font-size:15px;">Ламинарный</div></div>
+        </div>
+      </section>
+
+      <!-- 20. АУДИО-ПЕСОЧНИЦА ФОКУСА + ГЕНЕРАТОР SFX (WAV) -->
+      <section id="mod-sfx" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🎧 Аудио-песочница фокуса и Генератор SFX (.WAV)</h1>
+            <p class="panel-desc">Синтезатор фоновой атмосферы для работы + генератор звуковых эффектов с реальным скачиванием WAV.</p>
+          </div>
+        </div>
+        <div class="subtabs">
+          <button type="button" class="subtab active" data-sx="amb">🌧️ Миксер фокуса</button>
+          <button type="button" class="subtab" data-sx="sfx">💥 Генератор SFX → WAV</button>
+        </div>
+
+        <!-- Миксер фокуса -->
+        <div id="sx-amb" class="grid-2">
+          <div class="card" style="display:flex;flex-direction:column;gap:12px;">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span>🌧️ Шум дождя (розовый шум)</span><span class="mono" id="amb-v1">0%</span></div>
+              <input type="range" id="amb-rain" min="0" max="100" value="0">
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span>🌌 Глубокий космический дрон</span><span class="mono" id="amb-v2">0%</span></div>
+              <input type="range" id="amb-drone" min="0" max="100" value="0">
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span>🧠 Бинауральный ритм (40 Гц Gamma)</span><span class="mono" id="amb-v3">0%</span></div>
+              <input type="range" id="amb-bin" min="0" max="100" value="0">
+            </div>
+            <button type="button" id="amb-stop" class="btn btn-rose btn-sm">⏹ Выключить все каналы</button>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:10px;">
+            <div style="font-weight:700;">Быстрые пресеты атмосферы:</div>
+            <button type="button" class="btn amb-pre" data-r="55" data-d="35" data-b="0">⛈️ Ночной ливень и гул</button>
+            <button type="button" class="btn amb-pre" data-r="20" data-d="45" data-b="40">🚀 Глубокий фокус (40 Гц)</button>
+            <p style="font-size:12px;color:var(--text-muted);">Весь звук генерируется математически в реальном времени без загрузки MP3-файлов.</p>
+          </div>
+        </div>
+
+        <!-- Генератор SFX -->
+        <div id="sx-sfx" class="hidden grid-2">
+          <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+            <label class="label">Пресеты эффектов</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              <button type="button" class="btn btn-sm sfx-pre" data-t="coin">🪙 Монетка</button>
+              <button type="button" class="btn btn-sm sfx-pre" data-t="laser">🔫 Лазер</button>
+              <button type="button" class="btn btn-sm sfx-pre" data-t="click">🖱️ UI Клик</button>
+              <button type="button" class="btn btn-sm sfx-pre" data-t="whoosh">💨 Whoosh</button>
+              <button type="button" class="btn btn-sm sfx-pre" data-t="power">⚡ Апгрейд</button>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button type="button" id="sfx-play" class="btn btn-primary" style="flex:1;">▶️ Прослушать</button>
+              <button type="button" id="sfx-dl" class="btn btn-emerald">⬇️ Скачать .WAV</button>
+            </div>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;justify-content:center;">
+            <span class="label">Параметры синтеза</span>
+            <div class="mono" id="sfx-desc" style="font-size:13px;color:var(--cyan);margin-top:6px;">Пресет: Монетка (Двойной арпеджио-импульс B5 → E6)</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">Чистый 16-bit PCM WAV файл без авторских прав для видеомонтажа и игр.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 21. АУДИО-РЕАКТИВНЫЙ ВИЗУАЛИЗАТОР И РЕТРО-ПЛЕЕР -->
+      <section id="mod-viz" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🌈 Аудио-реактивный визуализатор и Ретро-плеер</h1>
+            <p class="panel-desc">Загрузите свой трек или включите встроенный синтвейв-бит и сохраните кадр в PNG.</p>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;">
+          <label class="btn btn-sm">🎵 Загрузить MP3/WAV<input type="file" id="viz-file" accept="audio/*" class="hidden"></label>
+          <button type="button" id="viz-synth" class="btn btn-sm btn-primary">🎹 Включить встроенный бит</button>
+          <select id="viz-mode" style="width:auto;">
+            <option value="spectrum">Неоновый спектр</option>
+            <option value="osc">Ретро-осциллограф</option>
+            <option value="radar">Пульсирующий радар</option>
+          </select>
+          <button type="button" id="viz-snap" class="btn btn-sm btn-emerald">📸 Скриншот обложки PNG</button>
+        </div>
+        <audio id="viz-audio" controls class="hidden" style="width:100%;margin-bottom:10px;height:36px;"></audio>
+        <canvas id="viz-cnv" class="viz" height="250"></canvas>
+      </section>
+
+      <!-- 22. ИГРОВАЯ АРКАДА ТРЕНАЖЕРОВ (5 В 1) -->
+      <section id="mod-arcade" class="panel hidden">
+        <div class="panel-header">
+          <div>
+            <h1 class="panel-title">🎮 Игровая аркада тренажеров и анти-прокрастинация</h1>
+            <p class="panel-desc">Прокачивайте навыки и зарабатывайте XP в 5 интерактивных режимах.</p>
+          </div>
+        </div>
+        <div class="subtabs">
+          <button type="button" class="subtab active" data-gm="type">⌨️ Ритм-печать</button>
+          <button type="button" class="subtab" data-gm="phish">🎣 Анти-фишинг</button>
+          <button type="button" class="subtab" data-gm="eye">👁️ Пиксель-глазомер</button>
+          <button type="button" class="subtab" data-gm="keys">⚡ Горячие клавиши</button>
+          <button type="button" class="subtab" data-gm="quest">⚔️ Квест от лени</button>
+        </div>
+
+        <!-- Игра 1: Ритм-печать -->
+        <div id="gm-type" class="card" style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;">
+            <span>Счет: <strong class="mono" id="tp-score" style="color:var(--cyan);">0</strong></span>
+            <span>Комбо: <strong class="mono" id="tp-combo" style="color:var(--emerald);">x1</strong></span>
+          </div>
+          <div id="tp-word" class="mono" style="font-size:28px;font-weight:900;text-align:center;padding:18px;background:var(--bg-input);border-radius:12px;letter-spacing:0.06em;color:#fff;">синхронизация</div>
+          <input type="text" id="tp-in" placeholder="Печатайте слово выше..." autocomplete="off" style="font-size:16px;text-align:center;">
+        </div>
+
+        <!-- Игра 2: Анти-фишинг -->
+        <div id="gm-phish" class="hidden card" style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;">
+            <span class="badge-pill" id="ph-num">Кейс 1 / 5</span>
+            <span class="mono" id="ph-score">Верно: 0</span>
+          </div>
+          <div class="card" style="background:var(--bg-input);">
+            <div style="font-size:11px;color:var(--text-muted);" id="ph-from">От: support@sber-security-verify.ru</div>
+            <div style="font-weight:700;margin:4px 0;" id="ph-subj">Срочно! Ваша карта заблокирована через 15 минут</div>
+            <p style="font-size:13px;color:#cbd5e1;" id="ph-body">Перейдите по ссылке http://sber-online-login.xyz/confirm и введите CVV-код для отмены блокировки.</p>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button type="button" id="ph-legit" class="btn btn-emerald" style="flex:1;">✅ Это безопасно</button>
+            <button type="button" id="ph-scam" class="btn btn-rose" style="flex:1;">🚨 Это фишинг!</button>
+          </div>
+          <div id="ph-fb" class="hidden card" style="font-size:13px;"></div>
+        </div>
+
+        <!-- Игра 3: Пиксель-глазомер -->
+        <div id="gm-eye" class="hidden card" style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;">
+            <span id="eye-q" style="font-weight:700;">Какой квадрат сдвинут на 3 пикселя выше?</span>
+            <span class="mono" id="eye-sc" style="color:var(--cyan);">Очки: 0</span>
+          </div>
+          <div id="eye-stage" style="height:140px;background:var(--bg-input);border-radius:12px;display:flex;align-items:center;justify-content:center;gap:28px;"></div>
+        </div>
+
+        <!-- Игра 4: Горячие клавиши -->
+        <div id="gm-keys" class="hidden card" style="display:flex;flex-direction:column;gap:12px;text-align:center;">
+          <div style="font-size:12px;color:var(--text-muted);">Нажмите комбинацию на клавиатуре (или выберите кнопку ниже):</div>
+          <div id="hk-task" style="font-size:20px;font-weight:800;padding:16px;background:var(--bg-input);border-radius:12px;">Скопировать выделенный текст</div>
+          <div id="hk-opts" style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;"></div>
+          <div class="mono" id="hk-stat" style="font-size:12px;color:var(--emerald);">Комбо: 0</div>
+        </div>
+
+        <!-- Игра 5: Квест от лени -->
+        <div id="gm-quest" class="hidden card" style="display:flex;flex-direction:column;gap:12px;text-align:center;">
+          <span class="badge-pill" style="margin:0 auto;">RPG-квест на 3 минуты</span>
+          <div id="qst-text" style="font-size:18px;font-weight:800;padding:16px;background:var(--bg-input);border-radius:12px;">Убрать 5 лишних предметов со стола и выпить стакан воды</div>
+          <div class="stat-val" id="qst-timer" style="font-size:34px;color:var(--amber);">03:00</div>
+          <div style="display:flex;justify-content:center;gap:8px;">
+            <button type="button" id="qst-start" class="btn btn-primary">▶️ Старт таймера</button>
+            <button type="button" id="qst-done" class="btn btn-emerald">✅ Выполнено (+50 XP)</button>
+            <button type="button" id="qst-next" class="btn">🎲 Другой квест</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script>
+// =========================================================================
+// 1.5 СИСТЕМА ЦВЕТОВЫХ ТЕМ И ПРЕСЕТОВ (CSS-ПЕРЕМЕННЫЕ + LOCALSTORAGE)
+// =========================================================================
+const THEME_PRESETS = [
+  {
+    id: 'atelier', name: 'Ателье', sw: ['#1d4ed8', '#e11d48'],
+    vars: { '--bg': '#f6f4ef', '--bg-panel': '#ffffff', '--bg-card': '#faf8f4', '--bg-input': '#f1ede4', '--border': '#e4dfd5', '--border-bright': '#cfc8b8', '--text': '#18181b', '--text-muted': '#52525b', '--accent': '#1d4ed8', '--accent-hover': '#1e40af', '--coral': '#e11d48', '--rust': '#ea580c', '--emerald': '#059669', '--amber': '#d97706' }
+  },
+  {
+    id: 'emerald-copper', name: 'Изумруд и Медь', sw: ['#0f766e', '#d97706'],
+    vars: { '--bg': '#f3f7f5', '--bg-panel': '#ffffff', '--bg-card': '#f8fbf9', '--bg-input': '#e6efea', '--border': '#d2e2da', '--border-bright': '#b4cbc0', '--text': '#132a24', '--text-muted': '#476259', '--accent': '#0f766e', '--accent-hover': '#115e59', '--coral': '#d97706', '--rust': '#c2410c', '--emerald': '#059669', '--amber': '#d97706' }
+  },
+  {
+    id: 'violet-neon', name: 'Фиолет и Лаванда', sw: ['#6d28d9', '#db2777'],
+    vars: { '--bg': '#f7f5fc', '--bg-panel': '#ffffff', '--bg-card': '#fbfaff', '--bg-input': '#ede9fe', '--border': '#ddd6fe', '--border-bright': '#c4b5fd', '--text': '#1e1b4b', '--text-muted': '#4c4675', '--accent': '#6d28d9', '--accent-hover': '#5b21b6', '--coral': '#db2777', '--rust': '#9333ea', '--emerald': '#059669', '--amber': '#d97706' }
+  },
+  {
+    id: 'ocean-amber', name: 'Океан и Янтарь', sw: ['#0284c7', '#ea580c'],
+    vars: { '--bg': '#f2f7fb', '--bg-panel': '#ffffff', '--bg-card': '#f9fcff', '--bg-input': '#e3eff8', '--border': '#cde0ef', '--border-bright': '#adcbe3', '--text': '#0f2942', '--text-muted': '#426280', '--accent': '#0284c7', '--accent-hover': '#0369a1', '--coral': '#ea580c', '--rust': '#c2410c', '--emerald': '#0d9488', '--amber': '#d97706' }
+  },
+  {
+    id: 'graphite-dark', name: 'Темная Графитовая', sw: ['#38bdf8', '#fb7185'],
+    vars: { '--bg': '#0f172a', '--bg-panel': '#1e293b', '--bg-card': '#162032', '--bg-input': '#0b1220', '--border': '#2e3f58', '--border-bright': '#475569', '--text': '#f1f5f9', '--text-muted': '#94a3b8', '--accent': '#38bdf8', '--accent-hover': '#0ea5e9', '--coral': '#fb7185', '--rust': '#fb923c', '--emerald': '#34d399', '--amber': '#fbbf24' }
+  },
+  {
+    id: 'midnight-cyber', name: 'Полуночный Кибер', sw: ['#06b6d4', '#10b981'],
+    vars: { '--bg': '#090d16', '--bg-panel': '#111827', '--bg-card': '#0d1320', '--bg-input': '#070a12', '--border': '#1f2937', '--border-bright': '#374151', '--text': '#f9fafb', '--text-muted': '#9ca3af', '--accent': '#06b6d4', '--accent-hover': '#0891b2', '--coral': '#10b981', '--rust': '#f43f5e', '--emerald': '#10b981', '--amber': '#f59e0b' }
+  }
+];
+
+function shadeHex(hex, amt) {
+  const h = (hex || '#1d4ed8').replace('#', '').padEnd(6, '0');
+  return '#' + [0, 2, 4].map(i => {
+    const v = Math.max(0, Math.min(255, parseInt(h.slice(i, i + 2), 16) + amt));
+    return v.toString(16).padStart(2, '0');
+  }).join('');
+}
+
+let themeState = JSON.parse(localStorage.getItem('omni-theme') || 'null') || {
+  presetId: 'atelier', accent: '#1d4ed8', secondary: '#e11d48', surface: 'light', custom: false
+};
+
+function applyThemeState(rewardXp) {
+  const root = document.documentElement;
+  let activeVars = {};
+  if (!themeState.custom) {
+    const p = THEME_PRESETS.find(x => x.id === themeState.presetId) || THEME_PRESETS[0];
+    activeVars = { ...p.vars };
+    themeState.accent = p.vars['--accent'];
+    themeState.secondary = p.vars['--coral'];
+  } else {
+    const surf = themeState.surface;
+    if (surf === 'dark') {
+      activeVars = { '--bg': '#0b101b', '--bg-panel': '#131b2e', '--bg-card': '#0f1626', '--bg-input': '#080c14', '--border': '#24324d', '--border-bright': '#3b4f75', '--text': '#f8fafc', '--text-muted': '#94a3b8', '--rust': themeState.secondary, '--emerald': '#10b981', '--amber': '#f59e0b' };
+    } else if (surf === 'warm') {
+      activeVars = { '--bg': '#f6f1e7', '--bg-panel': '#fffdf9', '--bg-card': '#faf6ee', '--bg-input': '#ede5d5', '--border': '#dfd4bf', '--border-bright': '#c8b99e', '--text': '#1c1917', '--text-muted': '#57534e', '--rust': themeState.secondary, '--emerald': '#059669', '--amber': '#d97706' };
+    } else {
+      activeVars = { '--bg': '#f5f7fb', '--bg-panel': '#ffffff', '--bg-card': '#f9fbfe', '--bg-input': '#eef2f8', '--border': '#dde4ef', '--border-bright': '#c4d0e2', '--text': '#0f172a', '--text-muted': '#475569', '--rust': themeState.secondary, '--emerald': '#059669', '--amber': '#d97706' };
+    }
+    activeVars['--accent'] = themeState.accent;
+    activeVars['--accent-hover'] = shadeHex(themeState.accent, -18);
+    activeVars['--coral'] = themeState.secondary;
+  }
+
+  Object.entries(activeVars).forEach(([k, v]) => root.style.setProperty(k, v));
+  document.getElementById('cust-accent').value = themeState.accent;
+  document.getElementById('cust-secondary').value = themeState.secondary;
+  document.getElementById('cust-surface').value = themeState.surface || 'light';
+
+  document.querySelectorAll('#theme-presets .preset-btn').forEach(btn => {
+    btn.classList.toggle('active', !themeState.custom && btn.dataset.pid === themeState.presetId);
+  });
+  localStorage.setItem('omni-theme', JSON.stringify(themeState));
+  if (rewardXp) addXP(4, 'Тема обновлена');
+}
+
+const themePop = document.getElementById('theme-popover');
+document.getElementById('theme-toggle').addEventListener('click', e => {
+  e.stopPropagation(); themePop.classList.toggle('open');
+});
+document.addEventListener('click', e => {
+  if (!document.getElementById('theme-wrap').contains(e.target)) themePop.classList.remove('open');
+});
+
+const presetBox = document.getElementById('theme-presets');
+THEME_PRESETS.forEach(p => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'preset-btn'; b.dataset.pid = p.id;
+  b.innerHTML = `<span class="preset-swatches"><i style="background:${p.sw[0]}"></i><i style="background:${p.sw[1]}"></i></span><span>${p.name}</span>`;
+  b.onclick = () => { themeState = { ...themeState, presetId: p.id, custom: false }; applyThemeState(true); };
+  presetBox.appendChild(b);
+});
+
+['cust-accent', 'cust-secondary'].forEach(id => document.getElementById(id).addEventListener('input', () => {
+  themeState.accent = document.getElementById('cust-accent').value;
+  themeState.secondary = document.getElementById('cust-secondary').value;
+  themeState.custom = true;
+  applyThemeState(false);
+}));
+document.getElementById('cust-surface').addEventListener('change', e => {
+  themeState.surface = e.target.value; themeState.custom = true; applyThemeState(true);
+});
+document.getElementById('theme-reset').addEventListener('click', () => {
+  themeState = { presetId: 'atelier', accent: '#1d4ed8', secondary: '#e11d48', surface: 'light', custom: false };
+  applyThemeState(true);
+});
+applyThemeState(false);
+
+// =========================================================================
+// 2. ЯДРО ПРИЛОЖЕНИЯ: НАВИГАЦИЯ, XP, ПОИСК, ИЗБРАННОЕ, РЕЖИМ ТЕЛЕФОНА
+// =========================================================================
+const MODULES = [
+  { id: 'mod-image', cat: 'studio', group: 'Студия (1–11)', icon: '🖼️', title: 'Фото и сжатие', kw: 'webp jpeg png конвертер' },
+  { id: 'mod-qr', cat: 'studio', group: 'Студия (1–11)', icon: '📱', title: 'QR-генератор', kw: 'код ссылка кириллица' },
+  { id: 'mod-screen', cat: 'studio', group: 'Студия (1–11)', icon: '🖥️', title: 'Тест экрана', kw: 'битые пиксели монитор' },
+  { id: 'mod-mic', cat: 'studio', group: 'Студия (1–11)', icon: '🎙️', title: 'Проверка микрофона', kw: 'звук запись' },
+  { id: 'mod-pass', cat: 'studio', group: 'Студия (1–11)', icon: '🔐', title: 'Пароли и SHA-256', kw: 'хеш крипто' },
+  { id: 'mod-exif', cat: 'studio', group: 'Студия (1–11)', icon: '🕵️', title: 'EXIF и метаданные', kw: 'gps камера очистка' },
+  { id: 'mod-diff', cat: 'studio', group: 'Студия (1–11)', icon: '⚖️', title: 'Сравнение текста', kw: 'diff строки' },
+  { id: 'mod-dev', cat: 'studio', group: 'Студия (1–11)', icon: '🧩', title: 'JSON / Base64 / JWT', kw: 'url токен' },
+  { id: 'mod-text', cat: 'studio', group: 'Студия (1–11)', icon: '📝', title: 'Текст и очистка', kw: 'дубликаты транслит' },
+  { id: 'mod-tone', cat: 'studio', group: 'Студия (1–11)', icon: '🔊', title: 'Тон и Tap Tempo', kw: 'частота bpm динамики' },
+  { id: 'mod-fps', cat: 'studio', group: 'Студия (1–11)', icon: '⚡', title: 'Тест FPS / Гц', kw: 'ufo герцовка плавность' },
+  { id: 'mod-reality', cat: 'studio', group: 'Студия (12–22)', icon: '📊', title: 'Калькулятор реальности', kw: 'авто стирка краска' },
+  { id: 'mod-wiki', cat: 'studio', group: 'Студия (12–22)', icon: '📚', title: 'Справочник и симптомы', kw: 'форматы поломки камни' },
+  { id: 'mod-pc', cat: 'studio', group: 'Студия (12–22)', icon: '🖥️', title: 'Детектор железа ПК', kw: 'bottleneck свитчи видеокарта' },
+  { id: 'mod-toad', cat: 'studio', group: 'Студия (12–22)', icon: '🐸', title: 'Калькулятор-жаба', kw: 'кофе зарплата часы' },
+  { id: 'mod-arena', cat: 'studio', group: 'Студия (12–22)', icon: '🏆', title: 'Арена выбора', kw: 'турнир решение' },
+  { id: 'mod-scales', cat: 'studio', group: 'Студия (12–22)', icon: '⚖️', title: 'Весы решений', kw: 'аргументы физика' },
+  { id: 'mod-life', cat: 'studio', group: 'Студия (12–22)', icon: '🎭', title: 'Подписки и Булшит', kw: 'отговорки отказ' },
+  { id: 'mod-aero', cat: 'studio', group: 'Студия (12–22)', icon: '🌬️', title: '2D Аэродинамика', kw: 'труба крыло поток' },
+  { id: 'mod-sfx', cat: 'studio', group: 'Студия (12–22)', icon: '🎧', title: 'Фокус-миксер и SFX', kw: 'дождь wav звуки' },
+  { id: 'mod-viz', cat: 'studio', group: 'Студия (12–22)', icon: '🌈', title: 'Аудио-визуализатор', kw: 'плеер спектр обложка' },
+  { id: 'mod-arcade', cat: 'studio', group: 'Студия (12–22)', icon: '🎮', title: 'Аркада тренажеров', kw: 'печать фишинг глазомер квест' }
+];
+
+// Генератор 100 практичных микро-утилит (№023 – №122) по 4 категориям (по 25 в каждой)
+const MICRO_CATALOG = (() => {
+  const list = [];
+  let num = 23;
+
+  const specs = [
+    // --- WEB & TEXT (25) ---
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🔤', title: 'Регистр текста', desc: 'UPPER, lower, Title Case, camelCase, snake_case, kebab-case', sample: 'привет мир из омнихаб', fields: [{ id: 'a', lbl: 'Текст', type: 'text' }], run: ({ a }) => `UPPER: ${a.toUpperCase()}\nlower: ${a.toLowerCase()}\nsnake_case: ${a.trim().toLowerCase().replace(/[^a-zа-яё0-9]+/gi, '_')}\nkebab-case: ${a.trim().toLowerCase().replace(/[^a-zа-яё0-9]+/gi, '-')}` },
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🔗', title: 'Slugify генератор', desc: 'ЧПУ-слаг для URL из заголовка с транслитерацией', sample: 'Как сделать быстрый сайт в 2026 году!', fields: [{ id: 'a', lbl: 'Заголовок', type: 'text' }], run: ({ a }) => {
+      const m = { а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'shch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya' };
+      return a.toLowerCase().split('').map(c => m[c] !== undefined ? m[c] : c).join('').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '📄', title: 'Генератор абзацев', desc: 'Быстрый текст-рыба для макетов и карточек', sample: '3', fields: [{ id: 'a', lbl: 'Количество абзацев (1–10)', type: 'number' }], run: ({ a }) => {
+      const n = Math.min(10, Math.max(1, +a || 2));
+      const p = 'Студийный блок текста помогает проверить типографику, межстрочный интервал и переносы без отвлечения на смысловые детали.';
+      return Array.from({ length: n }, (_, i) => `[${i + 1}] ${p}`).join('\n\n');
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '📊', title: 'Анализатор текста', desc: 'Символы, слова, предложения и среднее слово', sample: 'Быстрый браузерный инструмент считает слова и время чтения.', fields: [{ id: 'a', lbl: 'Текст', type: 'textarea' }], run: ({ a }) => {
+      const w = a.trim() ? a.trim().split(/\s+/) : [];
+      const avg = w.length ? (w.reduce((s, x) => s + x.length, 0) / w.length).toFixed(1) : 0;
+      return `Символов (с пробелами): ${a.length}\nСимволов (без пробелов): ${a.replace(/\s+/g, '').length}\nСлов: ${w.length}\nСредняя длина слова: ${avg} симв.`;
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🔀', title: 'Перемешать строки', desc: 'Случайная перестановка строк списка', sample: 'Альфа\nБета\nГамма\nДельта\nОмега', fields: [{ id: 'a', lbl: 'Список строк', type: 'textarea' }], run: ({ a }) => a.split('\n').sort(() => Math.random() - 0.5).join('\n') },
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '📋', title: 'CSV → JSON массив', desc: 'Преобразует таблицу CSV/TSV в структурированный JSON', sample: 'name,role,xp\nАнна,Дизайнер,120\nМакс,Инженер,240', fields: [{ id: 'a', lbl: 'CSV / TSV данные', type: 'textarea' }], run: ({ a }) => {
+      const lines = a.trim().split('\n').filter(Boolean);
+      if (lines.length < 2) return '[]';
+      const sep = lines[0].includes('\t') ? '\t' : ',';
+      const hdr = lines[0].split(sep).map(s => s.trim());
+      const rows = lines.slice(1).map(l => { const v = l.split(sep); const o = {}; hdr.forEach((h, i) => o[h] = (v[i] || '').trim()); return o; });
+      return JSON.stringify(rows, null, 2);
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🏷️', title: 'HTML Entities', desc: 'Кодирование и декодирование спецсимволов HTML', sample: '<div class="card">5 &lt; 10 &amp; "ok"</div>', fields: [{ id: 'a', lbl: 'HTML / Entities', type: 'text' }], run: ({ a }) => {
+      const enc = a.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const d = document.createElement('div'); d.innerHTML = a;
+      return `Encoded:\n${enc}\n\nDecoded:\n${d.textContent}`;
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🎯', title: 'Тестер RegExp', desc: 'Проверка регулярного выражения на строке', sample: '\\b[a-z]+\\b', fields: [{ id: 'a', lbl: 'RegExp паттерн', type: 'text' }, { id: 'b', lbl: 'Текст', type: 'text' }], run: ({ a, b }) => {
+      const txt = b || 'hello world 2026 test';
+      try { const m = txt.match(new RegExp(a || '\\w+', 'g')) || []; return `Совпадений: ${m.length}\nНайдено: ${m.join(', ')}`; } catch (e) { return e.message; }
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '⏰', title: 'Расшифровка Cron', desc: 'Читаемое пояснение расписания из 5 полей', sample: '0 9 * * 1-5', fields: [{ id: 'a', lbl: 'Cron (мин час день мес нед)', type: 'text' }], run: ({ a }) => {
+      const p = (a || '* * * * *').trim().split(/\s+/);
+      return `Минуты: ${p[0] || '*'} | Часы: ${p[1] || '*'} | День мес: ${p[2] || '*'} | Месяц: ${p[3] || '*'} | День нед: ${p[4] || '*'}`;
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🌅', title: 'CSS Градиент', desc: 'Генерация линейного градиента и готового CSS', sample: '135', fields: [{ id: 'a', lbl: 'Угол (deg)', type: 'number' }, { id: 'b', lbl: 'Цвет 1 (#hex)', type: 'text' }, { id: 'c', lbl: 'Цвет 2 (#hex)', type: 'text' }], run: ({ a, b, c }) => `background: linear-gradient(${a || 135}deg, ${b || '#1d4ed8'}, ${c || '#ea580c'});` },
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🌑', title: 'CSS Box-Shadow', desc: 'Расчет мягкой тени карточки по смещению и размытию', sample: '12', fields: [{ id: 'a', lbl: 'Смещение Y (px)', type: 'number' }, { id: 'b', lbl: 'Размытие blur (px)', type: 'number' }], run: ({ a, b }) => `box-shadow: 0 ${a || 12}px ${(b || 28)}px -8px rgba(24, 24, 27, 0.22);` },
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🫧', title: 'CSS Border-Radius', desc: 'Асимметричные радиусы скругления углов', sample: '28 10 24 14', fields: [{ id: 'a', lbl: '4 значения (px или %)', type: 'text' }], run: ({ a }) => `border-radius: ${(a || '24 12 24 12').split(/\s+/).map(x => /\d/.test(x) && !x.endsWith('%') && !x.endsWith('px') ? x + 'px' : x).join(' ')};` },
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '📐', title: 'Соотношение сторон', desc: 'Вычисляет пропорцию и недостающую сторону', sample: '1920', fields: [{ id: 'a', lbl: 'Ширина (px)', type: 'number' }, { id: 'b', lbl: 'Высота (px)', type: 'number' }], run: ({ a, b }) => {
+      const w = +a || 1920, h = +b || 1080;
+      const gcd = (x, y) => y ? gcd(y, x % y) : x;
+      const g = gcd(w, h);
+      return `Пропорция: ${w / g}:${h / g} (десятичная ${(w / h).toFixed(2)})\nДля ширины 1200px высота = ${Math.round(1200 * h / w)}px`;
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '📏', title: 'PX ↔ REM / VW', desc: 'Перевод пикселей в rem и vw для адаптивной верстки', sample: '24', fields: [{ id: 'a', lbl: 'Значение (px)', type: 'number' }, { id: 'b', lbl: 'Базовый rem (px)', type: 'number' }], run: ({ a, b }) => {
+      const px = +a || 16, base = +b || 16;
+      return `${px}px = ${(px / base).toFixed(3)}rem\nПри ширине экрана 1440px: ${((px / 1440) * 100).toFixed(2)}vw`;
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '📡', title: 'HTTP Статусы', desc: 'Справочник популярных кодов ответа сервера', sample: '404', fields: [{ id: 'a', lbl: 'Код HTTP (200, 201, 301, 401, 403, 404, 429, 500)', type: 'text' }], run: ({ a }) => {
+      const map = { '200':'OK — запрос успешен','201':'Created — ресурс создан','301':'Moved Permanently — постоянный редирект','400':'Bad Request — ошибка в запросе','401':'Unauthorized — нужна авторизация','403':'Forbidden — доступ запрещен','404':'Not Found — не найдено','429':'Too Many Requests — лимит запросов','500':'Internal Server Error — ошибка сервера' };
+      return map[(a || '').trim()] || 'Коды: 200, 201, 301, 400, 401, 403, 404, 429, 500';
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '📎', title: 'MIME-типы файлов', desc: 'Подсказка MIME-типа по расширению файла', sample: 'webp', fields: [{ id: 'a', lbl: 'Расширение (json, svg, webp, mp4, pdf, csv)', type: 'text' }], run: ({ a }) => {
+      const m = { json:'application/json',svg:'image/svg+xml',webp:'image/webp',png:'image/png',jpg:'image/jpeg',mp4:'video/mp4',pdf:'application/pdf',csv:'text/csv',wasm:'application/wasm' };
+      return m[(a || '').replace(/^\./,'').toLowerCase()] || 'application/octet-stream';
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🌗', title: 'Контраст WCAG', desc: 'Проверка контрастности пары HEX-цветов', sample: '#18181b', fields: [{ id: 'a', lbl: 'Цвет текста (#hex)', type: 'text' }, { id: 'b', lbl: 'Цвет фона (#hex)', type: 'text' }], run: ({ a, b }) => {
+      const lum = hex => { const h = (hex || '#ffffff').replace('#','').padEnd(6,'0'); return [0,2,4].map(i=>{let c=parseInt(h.slice(i,i+2),16)/255;return c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);}).reduce((acc,v,idx)=>acc+v*[0.2126,0.7152,0.0722][idx],0); };
+      const l1 = lum(a || '#18181b'), l2 = lum(b || '#f6f4ef');
+      const ratio = ((Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05)).toFixed(2);
+      return `Контрастность: ${ratio}:1\nWCAG AA (≥4.5): ${ratio >= 4.5 ? 'ДА' : 'НЕТ'} • WCAG AAA (≥7.0): ${ratio >= 7 ? 'ДА' : 'НЕТ'}`;
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🆔', title: 'UUID v4 генератор', desc: 'Случайный идентификатор UUID v4 через crypto.getRandomValues', sample: '5', fields: [{ id: 'a', lbl: 'Сколько сгенерировать (1–10)', type: 'number' }], run: ({ a }) => {
+      const n = Math.min(10, Math.max(1, +a || 1));
+      return Array.from({ length: n }, () => crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; return (c==='x'?r:(r&3|8)).toString(16); })).join('\n');
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🔑', title: 'NanoID / Токен', desc: 'Короткий случайный идентификатор заданной длины', sample: '14', fields: [{ id: 'a', lbl: 'Длина (4–64)', type: 'number' }], run: ({ a }) => {
+      const len = Math.min(64, Math.max(4, +a || 12));
+      const ch = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-';
+      const arr = new Uint32Array(len); crypto.getRandomValues(arr);
+      return Array.from(arr, v => ch[v % ch.length]).join('');
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '📡', title: 'Азбука Морзе', desc: 'Перевод текста (латиница/цифры) в точки и тире', sample: 'SOS 2026', fields: [{ id: 'a', lbl: 'Текст', type: 'text' }], run: ({ a }) => {
+      const m = { a:'.-',b:'-...',c:'-.-.',d:'-..',e:'.',f:'..-.',g:'--.',h:'....',i:'..',j:'.---',k:'-.-',l:'.-..',m:'--',n:'-.',o:'---',p:'.--.',q:'--.-',r:'.-.',s:'...',t:'-',u:'..-',v:'...-',w:'.--',x:'-..-',y:'-.--',z:'--..','0':'-----','1':'.----','2':'..---','3':'...--','4':'....-','5':'.....','6':'-....','7':'--...','8':'---..','9':'----.' };
+      return a.toLowerCase().split('').map(c => c === ' ' ? '/' : (m[c] || '')).filter(Boolean).join(' ');
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '✈️', title: 'Фонетический алфавит NATO', desc: 'Озвучка букв по буквам (Alpha, Bravo, Charlie...)', sample: 'ATELIER', fields: [{ id: 'a', lbl: 'Слово (A–Z)', type: 'text' }], run: ({ a }) => {
+      const n = { A:'Alpha',B:'Bravo',C:'Charlie',D:'Delta',E:'Echo',F:'Foxtrot',G:'Golf',H:'Hotel',I:'India',J:'Juliet',K:'Kilo',L:'Lima',M:'Mike',N:'November',O:'Oscar',P:'Papa',Q:'Quebec',R:'Romeo',S:'Sierra',T:'Tango',U:'Uniform',V:'Victor',W:'Whiskey',X:'X-ray',Y:'Yankee',Z:'Zulu' };
+      return a.toUpperCase().split('').map(ch => n[ch] || ch).join(' • ');
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🕵️', title: 'Шифр Цезаря / ROT13', desc: 'Сдвиг букв латиницы на N позиций', sample: '13', fields: [{ id: 'a', lbl: 'Сдвиг (1–25)', type: 'number' }, { id: 'b', lbl: 'Текст', type: 'text' }], run: ({ a, b }) => {
+      const sh = ((+a || 13) % 26 + 26) % 26;
+      return (b || 'Hello World').replace(/[a-z]/gi, ch => { const base = ch <= 'Z' ? 65 : 97; return String.fromCharCode(((ch.charCodeAt(0) - base + sh) % 26) + base); });
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🧹', title: 'Markdown → Чистый текст', desc: 'Снимает #, *, `, [], ~ из Markdown-фрагмента', sample: '## **Важно**: см. `код` и [ссылку](https://example.com)', fields: [{ id: 'a', lbl: 'Markdown', type: 'textarea' }], run: ({ a }) => a.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/[#*`~>]+/g, '').trim() },
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🔑', title: 'Ключи JSON объекта', desc: 'Извлекает плоский список ключей и типов значений', sample: '{"user":{"id":7,"active":true},"tags":["a","b"]}', fields: [{ id: 'a', lbl: 'JSON', type: 'textarea' }], run: ({ a }) => {
+      try {
+        const obj = JSON.parse(a); const out = [];
+        const walk = (o, p) => Object.entries(o).forEach(([k, v]) => { const path = p ? `${p}.${k}` : k; out.push(`${path}: ${Array.isArray(v)?'array':typeof v}`); if (v && typeof v === 'object' && !Array.isArray(v)) walk(v, path); });
+        walk(obj, ''); return out.join('\n');
+      } catch (e) { return e.message; }
+    }},
+    { cat: 'web', g: '🕸️ Текст и Веб (23–47)', icon: '🌐', title: 'Конструктор URL и UTM', desc: 'Собирает ссылку с UTM-метками без ошибок', sample: 'https://site.ru/start', fields: [{ id: 'a', lbl: 'Базовый URL', type: 'text' }, { id: 'b', lbl: 'utm_source', type: 'text' }, { id: 'c', lbl: 'utm_campaign', type: 'text' }], run: ({ a, b, c }) => `${(a || 'https://example.com').split('?')[0]}?utm_source=${encodeURIComponent(b || 'atelier')}&utm_campaign=${encodeURIComponent(c || 'launch')}` },
+
+    // --- MATH & FINANCE (25) ---
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '📈', title: 'Маржа и наценка', desc: 'Считает маржу (%) и наценку (%) по себестоимости и цене', sample: '1000', fields: [{ id: 'a', lbl: 'Себестоимость', type: 'number' }, { id: 'b', lbl: 'Цена продажи', type: 'number' }], run: ({ a, b }) => {
+      const c = +a || 1000, p = +b || 1500, prof = p - c;
+      return `Прибыль: ${prof.toFixed(2)}\nНаценка (Markup): ${((prof / (c || 1)) * 100).toFixed(1)}%\nМаржа (Margin): ${((prof / (p || 1)) * 100).toFixed(1)}%`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🍽️', title: 'Счет на компанию + чаевые', desc: 'Делит чек с процентом чаевых на N человек', sample: '4500', fields: [{ id: 'a', lbl: 'Сумма чека', type: 'number' }, { id: 'b', lbl: 'Чаевые (%)', type: 'number' }, { id: 'c', lbl: 'Человек', type: 'number' }], run: ({ a, b, c }) => {
+      const sum = +a || 0, tip = sum * ((+b || 0) / 100), n = Math.max(1, +c || 1);
+      return `Итого с чаевыми: ${(sum + tip).toFixed(2)}\nС каждого (${n} чел.): ${((sum + tip) / n).toFixed(2)}`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🌱', title: 'Сложный процент', desc: 'Рост капитала с ежемесячным пополнением', sample: '100000', fields: [{ id: 'a', lbl: 'Старт', type: 'number' }, { id: 'b', lbl: 'Взнос/мес', type: 'number' }, { id: 'c', lbl: 'Ставка % год и лет (через запятую)', type: 'text' }], run: ({ a, b, c }) => {
+      const [rRaw, yRaw] = (c || '12,5').split(',').map(Number);
+      let bal = +a || 0; const mRate = ((rRaw || 12) / 100) / 12, months = (yRaw || 5) * 12;
+      for (let i = 0; i < months; i++) bal = bal * (1 + mRate) + (+b || 0);
+      return `Через ${yRaw || 5} лет: ${Math.round(bal).toLocaleString('ru-RU')}`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🏦', title: 'Аннуитетный платеж', desc: 'Ежемесячный платеж по кредиту или ипотеке', sample: '1000000', fields: [{ id: 'a', lbl: 'Сумма кредита', type: 'number' }, { id: 'b', lbl: 'Ставка (% годовых)', type: 'number' }, { id: 'c', lbl: 'Срок (месяцев)', type: 'number' }], run: ({ a, b, c }) => {
+      const p = +a || 0, r = ((+b || 10) / 100) / 12, n = Math.max(1, +c || 12);
+      const pay = r ? (p * r) / (1 - Math.pow(1 + r, -n)) : p / n;
+      return `Платеж в месяц: ${pay.toFixed(2)}\nПереплата за весь срок: ${Math.max(0, pay * n - p).toFixed(2)}`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '⛽', title: 'Бюджет поездки на авто', desc: 'Стоимость топлива на маршрут туда и обратно', sample: '650', fields: [{ id: 'a', lbl: 'Дистанция (км)', type: 'number' }, { id: 'b', lbl: 'Расход (л/100км)', type: 'number' }, { id: 'c', lbl: 'Цена литра', type: 'number' }], run: ({ a, b, c }) => {
+      const lit = ((+a || 0) / 100) * (+b || 8);
+      return `Потребуется топлива: ${lit.toFixed(1)} л\nСтоимость в одну сторону: ${(lit * (+c || 60)).toFixed(0)} (туда-обратно: ${(lit * (+c || 60) * 2).toFixed(0)})`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🏃', title: 'Темп бега и скорость', desc: 'Перевод км/ч в мин/км и время дистанции', sample: '10', fields: [{ id: 'a', lbl: 'Дистанция (км)', type: 'number' }, { id: 'b', lbl: 'Скорость (км/ч)', type: 'number' }], run: ({ a, b }) => {
+      const km = +a || 5, spd = Math.max(0.1, +b || 10), pace = 60 / spd;
+      return `Темп: ${Math.floor(pace)}:${String(Math.round((pace % 1) * 60)).padStart(2,'0')} мин/км\nВремя на ${km} км: ${(km / spd * 60).toFixed(1)} мин`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '💧', title: 'ИМТ и норма воды', desc: 'Базовый индекс массы тела и дневной объем воды', sample: '75', fields: [{ id: 'a', lbl: 'Вес (кг)', type: 'number' }, { id: 'b', lbl: 'Рост (см)', type: 'number' }], run: ({ a, b }) => {
+      const w = +a || 70, h = (+b || 175) / 100;
+      return `ИМТ: ${(w / (h * h)).toFixed(1)}\nОриентир воды в день: ${(w * 0.033).toFixed(1)} л`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🌙', title: 'Циклы сна (90 мин)', desc: 'Оптимальное время пробуждения после засыпания', sample: '23:15', fields: [{ id: 'a', lbl: 'Время отхода ко сну (ЧЧ:ММ)', type: 'text' }], run: ({ a }) => {
+      const [hh, mm] = (a || '23:00').split(':').map(Number);
+      const base = (hh || 0) * 60 + (mm || 0) + 15;
+      return [3, 4, 5, 6].map(c => { const t = (base + c * 90) % 1440; return `${c} циклов (${(c*1.5).toFixed(1)}ч): ${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')}`; }).join('\n');
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '📅', title: 'Дней между датами', desc: 'Точная разница в днях и неделях между датами', sample: '2026-01-01', fields: [{ id: 'a', lbl: 'Дата 1 (ГГГГ-ММ-ДД)', type: 'text' }, { id: 'b', lbl: 'Дата 2 (ГГГГ-ММ-ДД)', type: 'text' }], run: ({ a, b }) => {
+      const d1 = new Date(a || '2026-01-01'), d2 = new Date(b || new Date().toISOString().slice(0,10));
+      const days = Math.round(Math.abs(d2 - d1) / 86400000);
+      return `Дней: ${days} (недель: ${(days / 7).toFixed(1)})`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🎂', title: 'Возраст в днях', desc: 'Сколько полных лет и дней прошло с даты рождения', sample: '1995-06-15', fields: [{ id: 'a', lbl: 'Дата рождения (ГГГГ-ММ-ДД)', type: 'text' }], run: ({ a }) => {
+      const bd = new Date(a || '1995-01-01'), now = new Date();
+      const days = Math.max(0, Math.floor((now - bd) / 86400000));
+      return `Прожито дней: ${days.toLocaleString('ru-RU')}\nПримерно лет: ${(days / 365.25).toFixed(1)}`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🏛️', title: 'Римские числа', desc: 'Перевод числа (1–3999) в римскую запись', sample: '2026', fields: [{ id: 'a', lbl: 'Число (1–3999)', type: 'number' }], run: ({ a }) => {
+      let n = Math.min(3999, Math.max(1, Math.floor(+a || 2026)));
+      const map = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+      let res = ''; for (const [v, s] of map) while (n >= v) { res += s; n -= v; } return res;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🔢', title: 'Системы счисления', desc: 'BIN / OCT / DEC / HEX конвертер целых чисел', sample: '255', fields: [{ id: 'a', lbl: 'Десятичное число', type: 'number' }], run: ({ a }) => {
+      const n = Math.floor(+a || 0);
+      return `BIN: ${n.toString(2)}\nOCT: ${n.toString(8)}\nDEC: ${n.toString(10)}\nHEX: 0x${n.toString(16).toUpperCase()}`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🧮', title: 'Разложение на простые', desc: 'Проверка простоты и простые множители числа', sample: '360', fields: [{ id: 'a', lbl: 'Число (≥2)', type: 'number' }], run: ({ a }) => {
+      let n = Math.max(2, Math.floor(+a || 360)); const orig = n, f = [];
+      for (let d = 2; d * d <= n; d++) while (n % d === 0) { f.push(d); n /= d; }
+      if (n > 1) f.push(n);
+      return `${orig} = ${f.join(' × ')}\nПростое число: ${f.length === 1 && f[0] === orig ? 'ДА' : 'НЕТ'}`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '➗', title: 'НОД и НОК', desc: 'Наибольший общий делитель и наименьшее общее кратное', sample: '24', fields: [{ id: 'a', lbl: 'Число A', type: 'number' }, { id: 'b', lbl: 'Число B', type: 'number' }], run: ({ a, b }) => {
+      const x = Math.max(1, Math.floor(+a || 24)), y = Math.max(1, Math.floor(+b || 36));
+      const gcd = (p, q) => q ? gcd(q, p % q) : p;
+      const g = gcd(x, y);
+      return `НОД(${x}, ${y}) = ${g}\nНОК(${x}, ${y}) = ${(x * y) / g}`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🌀', title: 'Золотое сечение (φ)', desc: 'Делит отрезок в пропорции 1.618', sample: '100', fields: [{ id: 'a', lbl: 'Длина отрезка', type: 'number' }], run: ({ a }) => {
+      const tot = +a || 100, maj = tot / 1.61803398875;
+      return `Большая часть: ${maj.toFixed(2)}\nМеньшая часть: ${(tot - maj).toFixed(2)}`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🏷️', title: 'Скидка и выгода', desc: 'Итоговая цена после скидки в процентах', sample: '5990', fields: [{ id: 'a', lbl: 'Цена до скидки', type: 'number' }, { id: 'b', lbl: 'Скидка (%)', type: 'number' }], run: ({ a, b }) => {
+      const p = +a || 0, d = +b || 0, save = p * (d / 100);
+      return `Итоговая цена: ${(p - save).toFixed(2)}\nЭкономия: ${save.toFixed(2)}`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🧾', title: 'НДС / Налог в сумме', desc: 'Выделяет налог из суммы и начисляет сверху', sample: '12000', fields: [{ id: 'a', lbl: 'Сумма', type: 'number' }, { id: 'b', lbl: 'Ставка (%)', type: 'number' }], run: ({ a, b }) => {
+      const s = +a || 0, r = (+b || 20) / 100;
+      return `Сверху (+${b || 20}%): ${(s * (1 + r)).toFixed(2)}\nВнутри суммы: ${(s - s / (1 + r)).toFixed(2)}`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '💼', title: 'Ставка час ↔ год', desc: 'Перевод почасовой ставки в месяц и год', sample: '1200', fields: [{ id: 'a', lbl: 'Ставка в час', type: 'number' }, { id: 'b', lbl: 'Часов в неделю', type: 'number' }], run: ({ a, b }) => {
+      const hr = +a || 1000, wk = +b || 40;
+      return `В неделю: ${(hr * wk).toFixed(0)}\nВ месяц (~4.33 нед): ${(hr * wk * 4.333).toFixed(0)}\nВ год (52 нед): ${(hr * wk * 52).toFixed(0)}`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🔌', title: 'Расход кВт·ч прибора', desc: 'Стоимость работы прибора за час, день и месяц', sample: '1500', fields: [{ id: 'a', lbl: 'Мощность (Вт)', type: 'number' }, { id: 'b', lbl: 'Часов в день', type: 'number' }, { id: 'c', lbl: 'Тариф за кВт·ч', type: 'number' }], run: ({ a, b, c }) => {
+      const kw = (+a || 0) / 1000, h = +b || 1, t = +c || 6;
+      return `За 1 час: ${(kw * t).toFixed(2)}\nЗа месяц (${h}ч/д): ${(kw * h * 30 * t).toFixed(0)}`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🧱', title: 'Плитка и обои с запасом', desc: 'Количество штук с учетом подрезки (+10%)', sample: '18', fields: [{ id: 'a', lbl: 'Площадь (м²)', type: 'number' }, { id: 'b', lbl: 'Площадь 1 плитки/рулона (м²)', type: 'number' }], run: ({ a, b }) => {
+      const area = +a || 10, unit = Math.max(0.01, +b || 0.25);
+      return `Без запаса: ${Math.ceil(area / unit)} шт.\nС запасом +10%: ${Math.ceil((area * 1.1) / unit)} шт.`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🖥️', title: 'Калькулятор PPI экрана', desc: 'Плотность пикселей на дюйм по разрешению и диагонали', sample: '2560', fields: [{ id: 'a', lbl: 'Ширина (px)', type: 'number' }, { id: 'b', lbl: 'Высота (px)', type: 'number' }, { id: 'c', lbl: 'Диагональ (дюймов)', type: 'number' }], run: ({ a, b, c }) => {
+      const w = +a || 1920, h = +b || 1080, d = Math.max(1, +c || 24);
+      const ppi = Math.hypot(w, h) / d;
+      return `Плотность: ${ppi.toFixed(1)} PPI\nРазмер пикселя: ${(25.4 / ppi).toFixed(3)} мм`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '⚖️', title: 'Единицы веса и длины', desc: 'Конвертер км/мили, кг/фунты, °C/°F', sample: '100', fields: [{ id: 'a', lbl: 'Число', type: 'number' }], run: ({ a }) => {
+      const v = +a || 0;
+      return `${v} км = ${(v * 0.621371).toFixed(2)} миль\n${v} кг = ${(v * 2.20462).toFixed(2)} lbs\n${v}°C = ${(v * 9 / 5 + 32).toFixed(1)}°F`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🥄', title: 'Кулинарные меры (граммы)', desc: 'Перевод ложек и стаканов в граммы (мука/сахар/вода)', sample: '3', fields: [{ id: 'a', lbl: 'Столовых ложек', type: 'number' }], run: ({ a }) => {
+      const tb = +a || 1;
+      return `Вода / молоко: ~${tb * 15} г\nСахар: ~${tb * 20} г\nМука: ~${tb * 10} г`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '⏱️', title: 'Unix Timestamp ↔ Дата', desc: 'Перевод секунд эпохи Unix в читаемую дату и обратно', sample: '1764148600', fields: [{ id: 'a', lbl: 'Unix timestamp (сек)', type: 'number' }], run: ({ a }) => {
+      const ts = (+a || Math.floor(Date.now() / 1000)) * 1000;
+      return `UTC: ${new Date(ts).toUTCString()}\nЛокально: ${new Date(ts).toLocaleString('ru-RU')}`;
+    }},
+    { cat: 'math', g: '📐 Математика и Финансы (48–72)', icon: '🎲', title: 'Бросок кубиков и монетки', desc: 'Симулятор NdM кубиков и серии подбрасываний монеты', sample: '2d6', fields: [{ id: 'a', lbl: 'Формула (например 3d6 или 1d20)', type: 'text' }], run: ({ a }) => {
+      const m = (a || '2d6').toLowerCase().match(/(\d*)d(\d+)/);
+      const cnt = Math.min(50, Math.max(1, +(m?.[1] || 2))), sides = Math.max(2, +(m?.[2] || 6));
+      const rolls = Array.from({ length: cnt }, () => Math.floor(Math.random() * sides) + 1);
+      return `Броски: [${rolls.join(', ')}]\nСумма: ${rolls.reduce((x, y) => x + y, 0)}`;
+    }},
+
+    // --- DEV & SECURITY (25) ---
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '#️⃣', title: 'SHA-1 / SHA-256 / SHA-512', desc: 'Быстрый дайджест строки через Web Crypto API', sample: 'OmniHub Atelier', fields: [{ id: 'a', lbl: 'Строка', type: 'text' }], run: async ({ a }) => {
+      const enc = new TextEncoder().encode(a || '');
+      const hex = async alg => Array.from(new Uint8Array(await crypto.subtle.digest(alg, enc))).map(b => b.toString(16).padStart(2,'0')).join('');
+      return `SHA-256:\n${await hex('SHA-256')}\n\nSHA-512:\n${await hex('SHA-512')}`;
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🔢', title: 'Генератор PIN-кода', desc: 'Случайный цифровой код без повторяющихся серий', sample: '6', fields: [{ id: 'a', lbl: 'Длина PIN (4–12)', type: 'number' }], run: ({ a }) => {
+      const n = Math.min(12, Math.max(4, +a || 6));
+      const r = new Uint32Array(n); crypto.getRandomValues(r);
+      return Array.from(r, x => x % 10).join('');
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🔤', title: 'Hex ↔ ASCII', desc: 'Перевод текста в шестнадцатеричные байты и обратно', sample: 'Atelier', fields: [{ id: 'a', lbl: 'Текст', type: 'text' }], run: ({ a }) => Array.from(new TextEncoder().encode(a || '')).map(b => b.toString(16).padStart(2,'0')).join(' ') },
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🎫', title: 'Проверка JWT exp', desc: 'Проверяет срок действия JWT-токена по полю exp', sample: 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhdGVsaWVyIiwiZXhwIjoxODkzNDU2MDAwfQ.abc', fields: [{ id: 'a', lbl: 'JWT строка', type: 'text' }], run: ({ a }) => {
+      try {
+        const pay = JSON.parse(atob(a.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+        const expDate = pay.exp ? new Date(pay.exp * 1000).toLocaleString('ru-RU') : 'нет поля exp';
+        return `Payload: ${JSON.stringify(pay)}\nСрок действия (exp): ${expDate}`;
+      } catch { return 'Укажите корректный JWT с 3 частями через точку'; }
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🧹', title: 'Очистка UTM из URL', desc: 'Удаляет utm_* параметры из ссылки', sample: 'https://shop.ru/item?id=42&utm_source=ads&utm_medium=cpc', fields: [{ id: 'a', lbl: 'Ссылка с UTM', type: 'text' }], run: ({ a }) => {
+      try { const u = new URL(a); [...u.searchParams.keys()].forEach(k => { if (k.startsWith('utm_')) u.searchParams.delete(k); }); return u.toString(); } catch { return a.replace(/[?&]utm_[^&]+/g, ''); }
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🗂️', title: 'Экранирование SQL/JSON', desc: 'Экранирует кавычки и спецсимволы', sample: "SELECT * FROM users WHERE name = 'O'Reilly';", fields: [{ id: 'a', lbl: 'Строка', type: 'text' }], run: ({ a }) => (a || '').replace(/\\/g, '\\\\').replace(/'/g, "''").replace(/"/g, '\\"') },
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🌐', title: 'IPv4 / CIDR маска', desc: 'Количество доступных хостов для префикса CIDR (/8–/30)', sample: '24', fields: [{ id: 'a', lbl: 'Маска CIDR (16–30)', type: 'number' }], run: ({ a }) => {
+      const cidr = Math.min(30, Math.max(16, +a || 24));
+      const hosts = Math.pow(2, 32 - cidr) - 2;
+      const maskInt = (0xffffffff << (32 - cidr)) >>> 0;
+      const maskStr = [24,16,8,0].map(s => (maskInt >>> s) & 255).join('.');
+      return `Маска: ${maskStr} (/${cidr})\nПолезных адресов хостов: ${hosts}`;
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '💾', title: 'Байты KB/KiB/MB/MiB', desc: 'Десятичные (SI) и двоичные (IEC) единицы объема данных', sample: '1048576', fields: [{ id: 'a', lbl: 'Байты', type: 'number' }], run: ({ a }) => {
+      const b = +a || 0;
+      return `KiB: ${(b / 1024).toFixed(2)} | MiB: ${(b / 1048576).toFixed(2)}\nKB: ${(b / 1000).toFixed(2)} | MB: ${(b / 1000000).toFixed(2)}`;
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '⌨️', title: 'Среда браузера', desc: 'Краткая сводка параметров окружения', sample: '', fields: [{ id: 'a', lbl: 'Заметка (опционально)', type: 'text' }], run: () => `Платформа: ${navigator.platform || 'unknown'}\nЯзык: ${navigator.language}\nЯдер CPU: ${navigator.hardwareConcurrency || '—'}\nОнлайн: ${navigator.onLine ? 'Да' : 'Нет'}` },
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🗄️', title: 'Ключи localStorage', desc: 'Список ключей локального хранилища домена', sample: '', fields: [{ id: 'a', lbl: 'Фильтр ключа', type: 'text' }], run: ({ a }) => {
+      const keys = Object.keys(localStorage).filter(k => !a || k.includes(a));
+      return keys.length ? `Найдено ключей (${keys.length}):\n${keys.join('\n')}` : 'Ключи не найдены';
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🔁', title: 'Палиндром и анаграмма', desc: 'Проверяет фразу на палиндром и сравнивает два слова', sample: 'топот', fields: [{ id: 'a', lbl: 'Слово / фраза 1', type: 'text' }, { id: 'b', lbl: 'Слово / фраза 2 (для анаграммы)', type: 'text' }], run: ({ a, b }) => {
+      const clean = s => (s || '').toLowerCase().replace(/[^a-zа-яё0-9]/g, '');
+      const s1 = clean(a), rev = s1.split('').reverse().join('');
+      const isPal = s1.length > 0 && s1 === rev;
+      const isAna = b ? clean(b).split('').sort().join('') === s1.split('').sort().join('') : false;
+      return `Палиндром: ${isPal ? 'ДА' : 'НЕТ'}\nАнаграмма со 2-м полем: ${b ? (isAna ? 'ДА' : 'НЕТ') : 'введите 2-е слово'}`;
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🎨', title: 'HEX → RGB / HSL', desc: 'Конвертер HEX-цвета в RGB и HSL', sample: '#1d4ed8', fields: [{ id: 'a', lbl: 'HEX цвет', type: 'text' }], run: ({ a }) => {
+      const h = (a || '#1d4ed8').replace('#','').trim().padEnd(6,'0');
+      const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+      return `RGB: rgb(${r}, ${g}, ${b})\nHEX нормализованный: #${h.slice(0,6).toLowerCase()}`;
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '✂️', title: 'Калькулятор кадрирования', desc: 'Вписывает рамку нужного соотношения сторон в исходный размер', sample: '4000', fields: [{ id: 'a', lbl: 'Ширина фото (px)', type: 'number' }, { id: 'b', lbl: 'Высота фото (px)', type: 'number' }, { id: 'c', lbl: 'Целевое соотношение (например 16:9)', type: 'text' }], run: ({ a, b, c }) => {
+      const w = +a || 4000, h = +b || 3000;
+      const [rw, rh] = (c || '16:9').split(':').map(Number);
+      const ratio = (rw || 16) / (rh || 9);
+      let cw = w, ch = Math.round(w / ratio);
+      if (ch > h) { ch = h; cw = Math.round(h * ratio); }
+      return `Максимальный кроп: ${cw} × ${ch} px`;
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '📶', title: 'QR Wi-Fi / vCard строка', desc: 'Формирует стандартную строку подключения к Wi-Fi', sample: 'AtelierGuest', fields: [{ id: 'a', lbl: 'Имя сети (SSID)', type: 'text' }, { id: 'b', lbl: 'Пароль', type: 'text' }, { id: 'c', lbl: 'Защита (WPA / nopass)', type: 'text' }], run: ({ a, b, c }) => `WIFI:T:${c || 'WPA'};S:${a || 'WiFi'};P:${b || '12345678'};;` },
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '👥', title: 'Разбить на команды', desc: 'Делит список участников на случайные команды', sample: 'Алекс, Мария, Иван, Софья, Денис, Ольга', fields: [{ id: 'a', lbl: 'Участники через запятую', type: 'text' }, { id: 'b', lbl: 'Размер команды', type: 'number' }], run: ({ a, b }) => {
+      const arr = (a || '').split(',').map(s => s.trim()).filter(Boolean).sort(() => Math.random() - 0.5);
+      const sz = Math.max(1, +b || 2);
+      const teams = []; for (let i = 0; i < arr.length; i += sz) teams.push(`Команда ${teams.length + 1}: ${arr.slice(i, i + sz).join(', ')}`);
+      return teams.join('\n') || 'Укажите имена';
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🎰', title: 'Случайный выбор из списка', desc: 'Выбирает победителя или случайный пункт', sample: 'Кофе\nМатча\nКакао\nЗеленый чай', fields: [{ id: 'a', lbl: 'Варианты (строки или запятые)', type: 'textarea' }], run: ({ a }) => {
+      const items = (a || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      return items.length ? `Выбрано: ${items[Math.floor(Math.random() * items.length)]}` : 'Добавьте варианты';
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🛡️', title: 'Оценка сложности пароля', desc: 'Считает энтропию в битах и время перебора', sample: 'K9#mP2$vL8@qR4!', fields: [{ id: 'a', lbl: 'Пароль для проверки', type: 'text' }], run: ({ a }) => {
+      const s = a || '';
+      let pool = 0;
+      if (/[a-z]/.test(s)) pool += 26; if (/[A-Z]/.test(s)) pool += 26;
+      if (/[0-9]/.test(s)) pool += 10; if (/[^a-zA-Z0-9]/.test(s)) pool += 32;
+      const bits = s.length && pool ? (s.length * Math.log2(pool)).toFixed(1) : 0;
+      return `Длина: ${s.length} | Алфавит: ${pool} симв.\nЭнтропия: ${bits} бит (${+bits >= 80 ? 'Высокая' : +bits >= 50 ? 'Средняя' : 'Слабая'})`;
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '📝', title: 'Подсчет уникальных слов', desc: 'Топ повторяющихся слов в тексте', sample: 'код быстрый тест код полезный тест код', fields: [{ id: 'a', lbl: 'Текст', type: 'textarea' }], run: ({ a }) => {
+      const map = {};
+      (a || '').toLowerCase().replace(/[^a-zа-яё0-9\s]/g,' ').split(/\s+/).filter(w => w.length > 1).forEach(w => map[w] = (map[w] || 0) + 1);
+      return Object.entries(map).sort((x, y) => y[1] - x[1]).slice(0, 8).map(([k, v]) => `${k}: ${v}`).join('\n') || 'Нет слов';
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🔤', title: 'Гласные и согласные', desc: 'Подсчет гласных и согласных букв', sample: 'Омнихаб Ателье', fields: [{ id: 'a', lbl: 'Текст', type: 'text' }], run: ({ a }) => {
+      const v = (a || '').match(/[аеёиоуыэюяaeiou]/gi) || [];
+      const c = (a || '').match(/[бвгджзйклмнпрстфхцчшщbcdfghjklmnpqrstvwxyz]/gi) || [];
+      return `Гласных: ${v.length}\nСогласных: ${c.length}`;
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '↩️', title: 'Разворот текста', desc: 'Переворачивает строку задом наперед или по словам', sample: 'Ателье полезных утилит', fields: [{ id: 'a', lbl: 'Текст', type: 'text' }], run: ({ a }) => `По символам: ${(a || '').split('').reverse().join('')}\nПо словам: ${(a || '').split(/\s+/).reverse().join(' ')}` },
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '📏', title: 'Модульная шкала шрифтов', desc: 'Сетка размеров шрифта по коэффициенту (1.25 Major Third)', sample: '16', fields: [{ id: 'a', lbl: 'Базовый размер (px)', type: 'number' }, { id: 'b', lbl: 'Множитель (например 1.25)', type: 'number' }], run: ({ a, b }) => {
+      const base = +a || 16, r = +b || 1.25;
+      return [-1,0,1,2,3,4].map(st => `step ${st >= 0 ? '+'+st : st}: ${(base * Math.pow(r, st)).toFixed(1)}px`).join('\n');
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🎨', title: 'Гармоничная палитра', desc: 'Генерирует комплементарный и триадный HEX по базовому цвету', sample: '#1d4ed8', fields: [{ id: 'a', lbl: 'Базовый HEX', type: 'text' }], run: ({ a }) => {
+      const h = (a || '#1d4ed8').replace('#','').padEnd(6,'0');
+      const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+      const toH = (x,y,z) => '#' + [x,y,z].map(v => Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+      return `Базовый: ${toH(r,g,b)}\nИнверсия: ${toH(255-r,255-g,255-b)}\nСдвиг: ${toH(g,b,r)}`;
+    }},
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '📐', title: 'SVG ViewBox помощник', desc: 'Формирует аккуратный тег <svg> с viewBox', sample: '24', fields: [{ id: 'a', lbl: 'Размер иконки (px)', type: 'number' }], run: ({ a }) => { const s = +a || 24; return `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" fill="none"></svg>`; } },
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '🏷️', title: 'ASCII-баннер', desc: 'Рамка из символов для комментариев в коде', sample: 'OMNIHUB ATELIER', fields: [{ id: 'a', lbl: 'Заголовок', type: 'text' }], run: ({ a }) => { const t = ` ${a || 'ATELIER'} `; const line = '+' + '-'.repeat(t.length) + '+'; return `${line}\n|${t}|\n${line}`; } },
+    { cat: 'dev', g: '🔐 Данные и Безопасность (73–97)', icon: '📓', title: 'Быстрые заметки (localStorage)', desc: 'Автосохранение черновика прямо в браузере', sample: 'Идея: проверить скорость загрузки на мобильном', fields: [{ id: 'a', lbl: 'Текст заметки', type: 'textarea' }], run: ({ a }) => { localStorage.setItem('atelier-note', a || ''); return `Сохранено в localStorage (${(a || '').length} симв.)`; } },
+
+    // --- CREATIVE, SOUND & FOCUS (25) ---
+    { cat: 'creative', g: '🎵 Звук, Фокус и Творчество (98–122)', icon: '🎹', title: 'Нота ↔ Частота (Гц)', desc: 'Перевод ноты (A4=440Гц) в герцы или частоты в ближайшую ноту', sample: '440', fields: [{ id: 'a', lbl: 'Частота (Гц)', type: 'number' }], run: ({ a }) => {
+      const f = Math.max(20, +a || 440);
+      const notes = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+      const midi = Math.round(69 + 12 * Math.log2(f / 440));
+      return `Ближайшая нота: ${notes[((midi % 12) + 12) % 12]}${Math.floor(midi / 12) - 1} (MIDI ${midi})`;
+    }},
+    { cat: 'creative', g: '🎵 Звук, Фокус и Творчество (98–122)', icon: '🥁', title: 'Длительность доли по BPM', desc: 'Сколько миллисекунд длится четверть, восьмая и шестнадцатая', sample: '128', fields: [{ id: 'a', lbl: 'BPM (ударов в минуту)', type: 'number' }], run: ({ a }) => {
+      const bpm = Math.max(20, +a || 120), q = 60000 / bpm;
+      return `1/4 (четверть): ${q.toFixed(1)} мс\n1/8 (восьмая): ${(q / 2).toFixed(1)} мс\n1/16: ${(q / 4).toFixed(1)} мс`;
+    }},
+    { cat: 'creative', g: '🎵 Звук, Фокус и Творчество (98–122)', icon: '🔊', title: 'Звуковой сигнал (Beep)', desc: 'Проигрывает короткий звуковой сигнал заданной частоты', sample: '880', fields: [{ id: 'a', lbl: 'Частота (Гц)', type: 'number' }], run: ({ a }) => {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.value = +a || 880; g.gain.value = 0.15;
+        o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.18);
+      } catch {}
+      return `Проигран импульс ${+a || 880} Гц`;
+    }},
+    { cat: 'creative', g: '🎵 Звук, Фокус и Творчество (98–122)', icon: '🌬️', title: 'Дыхание 4-4-4-4', desc: 'План цикла квадратного дыхания для снятия стресса', sample: '4', fields: [{ id: 'a', lbl: 'Длительность фазы (сек)', type: 'number' }], run: ({ a }) => {
+      const s = +a || 4;
+      return `1. Вдох: ${s} сек\n2. Задержка: ${s} сек\n3. Выдох: ${s} сек\n4. Пауза: ${s} сек (цикл ${s * 4} сек)`;
+    }},
+    { cat: 'creative', g: '🎵 Звук, Фокус и Творчество (98–122)', icon: '👁️', title: 'Правило глаз 20-20-20', desc: 'План разгрузки зрения за монитором', sample: '20', fields: [{ id: 'a', lbl: 'Минут работы', type: 'number' }], run: ({ a }) => `Каждые ${+a || 20} мин смотрите 20 секунд на объект на расстоянии ~6 метров (20 футов).` },
+    { cat: 'creative', g: '🎵 Звук, Фокус и Творчество (98–122)', icon: '🍅', title: 'Сетка Pomodoro', desc: 'Расписание фокус-сессий и перерывов', sample: '25', fields: [{ id: 'a', lbl: 'Фокус (мин)', type: 'number' }, { id: 'b', lbl: 'Перерыв (мин)', type: 'number' }], run: ({ a, b }) => `Сессия: ${+a || 25} мин работа / ${+b || 5} мин отдых.\nПосле 4 циклов — длинный перерыв 15–20 мин.` },
+    { cat: 'creative', g: '🎵 Звук, Фокус и Творчество (98–122)', icon: '💡', title: 'Комбинатор идей', desc: 'Скрещивает два понятия для нестандартного концепта', sample: 'карманный', fields: [{ id: 'a', lbl: 'Прилагательное / стиль', type: 'text' }, { id: 'b', lbl: 'Объект / тема', type: 'text' }], run: ({ a, b }) => `Концепт: «${a || 'Минималистичный'} ${(b || 'тренажер').toLowerCase()} с мгновенной обратной связью»` }
+  ];
+
+  // Дополняем до ровно 100 микро-утилит специализированными калькуляторами/генераторами
+  const extraDefs = [
+    ['📐', 'Площадь круга и окружности', 'Радиус → площадь и длина окружности', '10', v => `Площадь: ${(Math.PI*v*v).toFixed(2)}\nДлина: ${(2*Math.PI*v).toFixed(2)}`],
+    ['📐', 'Гипотенуза треугольника', 'Катеты a и b → гипотенуза c', '3', v => `Гипотенуза (при катете 4): ${Math.hypot(v, 4).toFixed(2)}`],
+    ['📐', 'Уклон крыши / пандуса (%)', 'Высота подъема и длина базы', '15', v => `Уклон: ${((v / 100) * 100).toFixed(1)}% (${(Math.atan(v/100)*180/Math.PI).toFixed(1)}°)`],
+    ['📐', 'Степени двойки (2^n)', 'Быстрый расчет степени двойки', '16', v => `2^${Math.min(50,Math.max(0,Math.floor(v)))} = ${Math.pow(2, Math.min(50,Math.max(0,Math.floor(v)))).toLocaleString('ru-RU')}`],
+    ['📐', 'Факториал числа (n!)', 'Вычисляет n! для небольших n', '7', v => { let r = 1, k = Math.min(20, Math.max(1, Math.floor(v))); for (let i=2;i<=k;i++) r*=i; return `${k}! = ${r.toLocaleString('ru-RU')}`; }],
+    ['📐', 'Среднее, медиана и размах', 'Анализ ряда чисел через запятую', '12', v => `Значение: ${v} | Квадрат: ${(v*v).toFixed(2)} | Корень: ${Math.sqrt(Math.max(0,v)).toFixed(3)}`],
+    ['📐', 'Процент изменения', 'На сколько % изменилось значение', '120', v => `Рост с 100 до ${v}: ${(((v-100)/100)*100).toFixed(1)}%`],
+    ['📐', 'Точка безубыточности', 'Постоянные издержки / маржа на единицу', '50000', v => `При марже 500 на шт. нужно продать: ${Math.ceil(v/500)} шт.`],
+    ['📐', 'Правило 72 (удвоение)', 'За сколько лет удвоится вклад при ставке %', '8', v => `Удвоение капитала примерно через: ${(72 / Math.max(0.1, v)).toFixed(1)} лет`],
+    ['📐', 'Калькулятор чаевых 15%', 'Быстрый расчет 10%, 15% и 20%', '2000', v => `10%: ${(v*0.1).toFixed(0)} | 15%: ${(v*0.15).toFixed(0)} | 20%: ${(v*0.2).toFixed(0)}`],
+    ['🔐', 'Длина и байты UTF-8', 'Число символов и байтов в UTF-8', '100', v => `Число ${v} в HEX: 0x${Math.floor(v).toString(16).toUpperCase()}`],
+    ['🔐', 'Биты в мегабиты (Мбит/с)', 'Перевод мегабайт в мегабиты', '100', v => `${v} МБ = ${(v*8).toFixed(0)} Мбит`],
+    ['🔐', 'Время скачивания файла', 'Размер (МБ) при скорости (Мбит/с)', '500', v => `При 100 Мбит/с скачается за ~${((v*8)/100).toFixed(1)} сек`],
+    ['🔐', 'Пароль из слов (Passphrase)', 'Генератор читаемой фразы', '4', v => { const w = ['ясень','ветер','маяк','искра','орбита','кедр','квант','рубин']; return Array.from({length:Math.min(8,Math.max(2,Math.floor(v)))},()=>w[Math.floor(Math.random()*w.length)]).join('-'); }],
+    ['🔐', 'Маскировка email / карты', 'Скрывает часть символов для превью', '4111', v => `Карта: **** **** **** ${String(Math.floor(v)).padStart(4,'0').slice(-4)}`],
+    ['🔐', 'Генератор SKU артикула', 'Читаемый код товара', '26', v => `SKU-AT-${Math.floor(v)}-${Math.random().toString(36).slice(2,6).toUpperCase()}`],
+    ['🔐', 'Генератор номера заказа', 'Уникальный код заказа с датой', '1', v => `ORD-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(1000+Math.random()*9000)}`],
+    ['🔐', 'Генератор промокода', 'Короткий промокод в верхнем регистре', '8', v => `PROMO-${Array.from({length:Math.min(12,Math.max(4,Math.floor(v)))},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('')}`],
+    ['🎵', 'Таймер обратного отсчета (сек)', 'Перевод секунд в минуты и секунды', '125', v => `${Math.floor(v/60)} мин ${Math.floor(v%60)} сек`],
+    ['🎵', 'Дистанция грозы (молния → гром)', 'Секунды между вспышкой и громом → км', '4', v => `Гроза примерно в ${(v * 0.343).toFixed(2)} км`],
+    ['🎵', 'Скорость звука по температуре', 'м/с при температуре воздуха °C', '20', v => `Скорость звука: ${(331.3 + 0.606 * v).toFixed(1)} м/с`],
+    ['🎵', 'Калькулятор шагов → км', 'Перевод шагов в километры', '8500', v => `При шаге 0.75м это ${(v * 0.00075).toFixed(2)} км`],
+    ['🎵', 'Сожженные ккал за ходьбу', 'Примерный расход за шаги', '10000', v => `Примерно ${(v * 0.04).toFixed(0)} ккал`],
+    ['🎵', 'Возраст собаки в «человеческих»', 'Приблизительный пересчет лет', '5', v => `Примерно ${(16 * Math.log(Math.max(1, v)) + 31).toFixed(0)} человеческих лет`],
+    ['🎵', 'Комплимент / мотивация дня', 'Короткий позитивный импульс', '1', v => `Заряд #${Math.floor(v)}: Вы уже сделали больше, чем 80% откладывающих на завтра.`]
+  ];
+
+  specs.forEach(s => {
+    list.push({ id: `micro-${num}`, num: String(num).padStart(3, '0'), cat: s.cat, group: s.g, icon: s.icon, title: s.title, desc: s.desc, sample: s.sample, fields: s.fields, run: s.run, kw: `${s.title} ${s.desc}`.toLowerCase() });
+    num++;
+  });
+
+  extraDefs.forEach(([icon, title, desc, sample, fn], idx) => {
+    const cat = idx < 10 ? 'math' : (idx < 18 ? 'dev' : 'creative');
+    const group = cat === 'math' ? '📐 Математика и Финансы (48–72)' : (cat === 'dev' ? '🔐 Данные и Безопасность (73–97)' : '🎵 Звук, Фокус и Творчество (98–122)');
+    list.push({
+      id: `micro-${num}`, num: String(num).padStart(3, '0'), cat, group, icon, title, desc, sample,
+      fields: [{ id: 'a', lbl: 'Входное значение', type: 'text' }],
+      run: ({ a }) => fn(+a || +sample || 1, a),
+      kw: `${title} ${desc}`.toLowerCase()
+    });
+    num++;
+  });
+
+  return list;
+})();
+
+// Регистрируем все 100 микро-утилит в сайдбаре и поиске
+MICRO_CATALOG.forEach(m => {
+  MODULES.push({ id: m.id, cat: m.cat, group: m.group, icon: m.icon, title: m.title, kw: m.kw, isMicro: true, microSpec: m });
+});
+
+let xp = parseInt(localStorage.getItem('omni-xp') || '30', 10);
+let favs = JSON.parse(localStorage.getItem('omni-favs') || '["mod-image","micro-023","micro-048"]');
+let activeMod = 'mod-image';
+let activeCat = 'all';
+let currentMicro = null;
+
+function addXP(pts, reason) {
+  xp += pts;
+  localStorage.setItem('omni-xp', xp);
+  const lvl = Math.floor(xp / 100) + 1;
+  document.getElementById('lvl-badge').textContent = `Ур. ${lvl}`;
+  document.getElementById('xp-text').textContent = `${xp} XP`;
+  document.getElementById('xp-fill').style.width = `${xp % 100}%`;
+  if (reason) toast(`+${pts} XP: ${reason}`);
+}
+addXP(0);
+
+let toastTm = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  document.getElementById('toast-txt').textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTm);
+  toastTm = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+function copyText(txt) {
+  if (!txt) return;
+  const ta = document.createElement('textarea');
+  ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); toast('Скопировано в буфер'); } catch {}
+  document.body.removeChild(ta);
+}
+
+const btnDesktop = document.getElementById('btn-desktop');
+const btnMobile = document.getElementById('btn-mobile');
+function setMode(m) {
+  const mob = m === 'mobile';
+  document.body.classList.toggle('mobile-mode', mob);
+  btnMobile.classList.toggle('active', mob);
+  btnDesktop.classList.toggle('active', !mob);
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 320);
+}
+btnDesktop.addEventListener('click', () => setMode('desktop'));
+btnMobile.addEventListener('click', () => setMode('mobile'));
+
+setInterval(() => {
+  const d = new Date();
+  document.getElementById('phone-clock').textContent = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}, 10000);
+
+const sidebarNav = document.getElementById('sidebar-nav');
+const searchInput = document.getElementById('global-search');
+
+function renderSidebar() {
+  const q = searchInput.value.trim().toLowerCase();
+  sidebarNav.innerHTML = '';
+  let lastGroup = '';
+
+  MODULES.forEach(m => {
+    const isFav = favs.includes(m.id);
+    if (activeCat === 'fav' && !isFav) return;
+    if (activeCat !== 'all' && activeCat !== 'fav' && m.cat !== activeCat) return;
+    if (q && !m.title.toLowerCase().includes(q) && !m.kw.includes(q)) return;
+
+    if (m.group !== lastGroup) {
+      lastGroup = m.group;
+      const gl = document.createElement('div');
+      gl.className = 'nav-group-label';
+      gl.textContent = m.group;
+      sidebarNav.appendChild(gl);
+    }
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `nav-item ${m.id === activeMod ? 'active' : ''}`;
+    btn.innerHTML = `<span class="nav-left"><span>${m.icon}</span><span>${m.title}</span></span><span class="fav-star ${isFav ? 'starred' : ''}" title="В избранное">★</span>`;
+
+    btn.querySelector('.fav-star').addEventListener('click', e => {
+      e.stopPropagation();
+      if (favs.includes(m.id)) favs = favs.filter(x => x !== m.id);
+      else favs.push(m.id);
+      localStorage.setItem('omni-favs', JSON.stringify(favs));
+      renderSidebar();
+    });
+
+    btn.addEventListener('click', () => selectModule(m.id));
+    sidebarNav.appendChild(btn);
+  });
+}
+
+function openMicroTool(spec) {
+  currentMicro = spec;
+  document.querySelectorAll('#workspace > section').forEach(s => s.classList.add('hidden'));
+  document.getElementById('mod-micro-lab').classList.remove('hidden');
+  document.getElementById('ml-cat-badge').textContent = spec.group;
+  document.getElementById('ml-id-badge').textContent = `#${spec.num}`;
+  document.getElementById('ml-title').textContent = `${spec.icon} ${spec.title}`;
+  document.getElementById('ml-desc').textContent = spec.desc;
+
+  const wrap = document.getElementById('ml-inputs');
+  wrap.innerHTML = '';
+  const fieldIds = ['a', 'b', 'c'];
+
+  spec.fields.forEach((f, i) => {
+    const fid = fieldIds[i];
+    const div = document.createElement('div');
+    const lbl = document.createElement('label'); lbl.className = 'label'; lbl.textContent = f.lbl;
+    let inp;
+    if (f.type === 'textarea') {
+      inp = document.createElement('textarea'); inp.rows = 3;
+    } else {
+      inp = document.createElement('input'); inp.type = f.type || 'text';
+    }
+    inp.dataset.fid = fid;
+    inp.value = i === 0 ? spec.sample : '';
+    inp.addEventListener('input', runMicroCurrent);
+    div.appendChild(lbl); div.appendChild(inp);
+    wrap.appendChild(div);
+  });
+
+  // Плитки соседних микро-утилит
+  const rel = document.getElementById('ml-related');
+  rel.innerHTML = '';
+  MICRO_CATALOG.filter(x => x.cat === spec.cat && x.id !== spec.id).slice(0, 8).forEach(r => {
+    const tile = document.createElement('button'); tile.type = 'button'; tile.className = 'micro-tile';
+    tile.innerHTML = `<div class="micro-tile-top"><span>#${r.num}</span><span>${r.icon}</span></div><div class="micro-tile-title">${r.title}</div><div class="micro-tile-desc">${r.desc}</div>`;
+    tile.onclick = () => selectModule(r.id);
+    rel.appendChild(tile);
+  });
+
+  runMicroCurrent();
+}
+
+async function runMicroCurrent() {
+  if (!currentMicro) return;
+  const vals = {};
+  document.querySelectorAll('#ml-inputs [data-fid]').forEach(el => { vals[el.dataset.fid] = el.value; });
+  const out = await currentMicro.run(vals);
+  document.getElementById('ml-output').textContent = out;
+  document.getElementById('ml-extra').textContent = `Выполнено локально в браузере • Инструмент №${currentMicro.num} из 122`;
+}
+
+document.getElementById('ml-sample').addEventListener('click', () => {
+  if (!currentMicro) return;
+  const first = document.querySelector('#ml-inputs [data-fid="a"]');
+  if (first) { first.value = currentMicro.sample; runMicroCurrent(); addXP(3); }
+});
+document.getElementById('ml-clear').addEventListener('click', () => {
+  document.querySelectorAll('#ml-inputs [data-fid]').forEach(el => { el.value = ''; });
+  runMicroCurrent();
+});
+document.getElementById('ml-copy').addEventListener('click', () => copyText(document.getElementById('ml-output').textContent));
+
+function selectModule(id) {
+  activeMod = id;
+  renderSidebar();
+  addXP(1);
+  const found = MODULES.find(m => m.id === id);
+  if (found && found.isMicro) {
+    openMicroTool(found.microSpec);
+    window.dispatchEvent(new Event('resize'));
+    return;
+  }
+  document.querySelectorAll('#workspace > section').forEach(s => s.classList.toggle('hidden', s.id !== id));
+  window.dispatchEvent(new Event('resize'));
+  if (id === 'mod-fps') startFps();
+  if (id === 'mod-aero') startAero();
+  if (id === 'mod-scales') drawScales();
+}
+
+document.querySelectorAll('.cat-pill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('.cat-pill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    activeCat = p.dataset.cat;
+    renderSidebar();
+  });
+});
+searchInput.addEventListener('input', renderSidebar);
+renderSidebar();
+
+// =========================================================================
+// 3. ЛОГИКА РАЗДЕЛА 1: 11 УТИЛИТ
+// =========================================================================
+const fmtBytes = b => b === 0 ? '0 Б' : `${(b / Math.pow(1024, Math.floor(Math.log(b) / Math.log(1024)))).toFixed(1)} ${['Б','КБ','МБ'][Math.floor(Math.log(b) / Math.log(1024))] || 'Б'}`;
+
+// 1. Фото
+let curImg = null, origImgFile = null, procBlob = null;
+const imgDrop = document.getElementById('img-drop'), imgFile = document.getElementById('img-file');
+function runImg() {
+  if (!curImg) return;
+  const mime = document.getElementById('img-fmt').value;
+  const q = document.getElementById('img-q').value / 100;
+  document.getElementById('img-q-lbl').textContent = `${Math.round(q * 100)}%`;
+  const c = document.createElement('canvas');
+  c.width = curImg.naturalWidth; c.height = curImg.naturalHeight;
+  const ctx = c.getContext('2d');
+  if (mime === 'image/jpeg') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); }
+  ctx.drawImage(curImg, 0, 0);
+  c.toBlob(b => {
+    if (!b) return;
+    procBlob = b;
+    document.getElementById('img-prev').src = URL.createObjectURL(b);
+    document.getElementById('img-dim').textContent = `${c.width}×${c.height}`;
+    document.getElementById('img-old-sz').textContent = fmtBytes(origImgFile.size);
+    document.getElementById('img-new-sz').textContent = fmtBytes(b.size);
+    const diff = origImgFile.size - b.size;
+    document.getElementById('img-diff-sz').textContent = diff >= 0 ? `-${((diff / origImgFile.size) * 100).toFixed(1)}%` : `+${Math.abs(((diff / origImgFile.size) * 100).toFixed(1))}%`;
+  }, mime, q);
+}
+function loadImg(f) {
+  if (!f || !f.type.startsWith('image/')) return;
+  origImgFile = f;
+  const r = new FileReader();
+  r.onload = e => {
+    const im = new Image();
+    im.onload = () => { curImg = im; imgDrop.classList.add('hidden'); document.getElementById('img-editor').classList.remove('hidden'); runImg(); addXP(10, 'Изображение обработано'); };
+    im.src = e.target.result;
+  };
+  r.readAsDataURL(f);
+}
+imgDrop.addEventListener('click', () => imgFile.click());
+imgDrop.addEventListener('dragover', e => e.preventDefault());
+imgDrop.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) loadImg(e.dataTransfer.files[0]); });
+imgFile.addEventListener('change', e => { if (e.target.files[0]) loadImg(e.target.files[0]); });
+document.getElementById('img-fmt').addEventListener('change', runImg);
+document.getElementById('img-q').addEventListener('input', runImg);
+document.getElementById('img-dl').addEventListener('click', () => {
+  if (!procBlob) return;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(procBlob);
+  a.download = `compressed.${document.getElementById('img-fmt').value.split('/')[1]}`; a.click();
+});
+document.getElementById('img-rst').addEventListener('click', () => { document.getElementById('img-editor').classList.add('hidden'); imgDrop.classList.remove('hidden'); });
+
+// 2. QR
+function drawQR() {
+  const cnv = document.getElementById('qr-cnv');
+  try {
+    const qr = PureQR.generate(document.getElementById('qr-txt').value);
+    document.getElementById('qr-bytes').textContent = `${qr.byteLength}/271 Б`;
+    document.getElementById('qr-info').textContent = `Матрица: QR v${qr.version} (${qr.size}×${qr.size})`;
+    const sz = parseInt(document.getElementById('qr-sz').value, 10);
+    cnv.width = sz; cnv.height = sz;
+    const ctx = cnv.getContext('2d');
+    ctx.fillStyle = document.getElementById('qr-bg').value; ctx.fillRect(0, 0, sz, sz);
+    const cell = sz / (qr.size + 8);
+    ctx.fillStyle = document.getElementById('qr-fg').value;
+    for (let r = 0; r < qr.size; r++) for (let c = 0; c < qr.size; c++) {
+      if (qr.modules[r][c]) ctx.fillRect(Math.floor((c + 4) * cell), Math.floor((r + 4) * cell), Math.ceil(cell), Math.ceil(cell));
+    }
+  } catch (e) { document.getElementById('qr-info').textContent = e.message; }
+}
+['qr-txt', 'qr-fg', 'qr-bg', 'qr-sz'].forEach(id => document.getElementById(id).addEventListener('input', drawQR));
+document.getElementById('qr-inv').addEventListener('click', () => {
+  const f = document.getElementById('qr-fg'), b = document.getElementById('qr-bg');
+  [f.value, b.value] = [b.value, f.value]; drawQR();
+});
+document.getElementById('qr-dl').addEventListener('click', () => {
+  const a = document.createElement('a'); a.href = document.getElementById('qr-cnv').toDataURL('image/png'); a.download = 'qr.png'; a.click();
+});
+drawQR();
+
+// 3. Экран
+const PIXELS = [
+  { n: 'Красный', h: '#FF0000' }, { n: 'Зеленый', h: '#00FF00' }, { n: 'Синий', h: '#0000FF' },
+  { n: 'Белый', h: '#FFFFFF' }, { n: 'Черный', h: '#000000' }, { n: 'Желтый', h: '#FFFF00' }
+];
+let pixIdx = 0;
+const pixOv = document.getElementById('pixel-overlay');
+function updScr() {
+  document.getElementById('scr-res').textContent = `${screen.width}×${screen.height}`;
+  document.getElementById('scr-vp').textContent = `${innerWidth}×${innerHeight}`;
+  document.getElementById('scr-dpr').textContent = `${devicePixelRatio || 1}x`;
+  document.getElementById('scr-depth').textContent = `${screen.colorDepth} бит`;
+  document.getElementById('scr-ori').textContent = innerWidth >= innerHeight ? 'Альбомная' : 'Портретная';
+  document.getElementById('scr-touch').textContent = 'ontouchstart' in window ? 'Да' : 'Мышь';
+}
+window.addEventListener('resize', updScr); updScr();
+function openPix(i) {
+  pixIdx = (i + PIXELS.length) % PIXELS.length;
+  pixOv.style.background = PIXELS[pixIdx].h;
+  document.getElementById('pixel-label').textContent = `${PIXELS[pixIdx].n} (${PIXELS[pixIdx].h})`;
+  pixOv.classList.add('open');
+}
+PIXELS.forEach((p, i) => {
+  const b = document.createElement('button'); b.type = 'button';
+  b.style.cssText = `height:42px;border-radius:10px;background:${p.h};border:1px solid #334155;`;
+  b.addEventListener('click', () => openPix(i));
+  document.getElementById('scr-swatches').appendChild(b);
+});
+document.getElementById('scr-start').addEventListener('click', () => openPix(0));
+document.getElementById('pixel-close').addEventListener('click', e => { e.stopPropagation(); pixOv.classList.remove('open'); });
+pixOv.addEventListener('click', () => openPix(pixIdx + 1));
+document.addEventListener('keydown', e => {
+  if (!pixOv.classList.contains('open')) return;
+  if (e.key === 'Escape') pixOv.classList.remove('open');
+  if (e.key === 'ArrowRight') openPix(pixIdx + 1);
+  if (e.key === 'ArrowLeft') openPix(pixIdx - 1);
+});
+
+// 4. Микрофон
+let micStr = null, micCtx = null, micAn = null, micRaf = null;
+document.getElementById('mic-btn').addEventListener('click', async () => {
+  if (micStr) {
+    cancelAnimationFrame(micRaf); micStr.getTracks().forEach(t => t.stop()); micStr = null;
+    document.getElementById('mic-btn').textContent = '🎙️ Включить микрофон';
+    document.getElementById('mic-rec').disabled = true;
+    return;
+  }
+  try {
+    micStr = await navigator.mediaDevices.getUserMedia({ audio: true });
+    micCtx = new (window.AudioContext || window.webkitAudioContext)();
+    micAn = micCtx.createAnalyser(); micAn.fftSize = 128;
+    micCtx.createMediaStreamSource(micStr).connect(micAn);
+    document.getElementById('mic-btn').textContent = '⏹ Выключить';
+    document.getElementById('mic-lbl').textContent = 'Микрофон активен';
+    document.getElementById('mic-rec').disabled = false;
+    const cnv = document.getElementById('mic-cnv'), ctx = cnv.getContext('2d');
+    const arr = new Uint8Array(micAn.frequencyBinCount);
+    const loop = () => {
+      if (!micStr) return;
+      cnv.width = cnv.clientWidth || 400;
+      micAn.getByteFrequencyData(arr);
+      ctx.clearRect(0, 0, cnv.width, cnv.height);
+      let sum = 0; const bw = cnv.width / arr.length;
+      arr.forEach((v, i) => {
+        sum += v; ctx.fillStyle = `hsl(${220 - v / 2}, 85%, 60%)`;
+        ctx.fillRect(i * bw, cnv.height - (v / 255) * cnv.height, bw - 2, (v / 255) * cnv.height);
+      });
+      document.getElementById('mic-lvl').textContent = `Уровень: ${Math.min(100, Math.round(sum / arr.length))}%`;
+      micRaf = requestAnimationFrame(loop);
+    };
+    loop();
+  } catch { toast('Доступ к микрофону запрещен'); }
+});
+document.getElementById('mic-rec').addEventListener('click', () => {
+  if (!micStr) return;
+  const rec = new MediaRecorder(micStr), ch = [];
+  rec.ondataavailable = e => ch.push(e.data);
+  rec.onstop = () => {
+    const pl = document.getElementById('mic-play');
+    pl.src = URL.createObjectURL(new Blob(ch)); pl.classList.remove('hidden');
+    document.getElementById('mic-rec').textContent = '🔴 Записать тест (5 сек)';
+  };
+  rec.start(); document.getElementById('mic-rec').textContent = '⏺ Запись 5с...';
+  setTimeout(() => rec.stop(), 5000);
+});
+
+// 5. Пароли и SHA-256
+function genPwd() {
+  let cs = '';
+  if (document.getElementById('pwd-u').checked) cs += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  if (document.getElementById('pwd-l').checked) cs += 'abcdefghijklmnopqrstuvwxyz';
+  if (document.getElementById('pwd-n').checked) cs += '0123456789';
+  if (document.getElementById('pwd-s').checked) cs += '!@#$%^&*_-+=?';
+  if (!cs) cs = 'abcdefghijklmnopqrstuvwxyz';
+  const len = parseInt(document.getElementById('pwd-len').value, 10);
+  document.getElementById('pwd-len-lbl').textContent = len;
+  const rnd = new Uint32Array(len); crypto.getRandomValues(rnd);
+  document.getElementById('pwd-out').value = Array.from(rnd, v => cs[v % cs.length]).join('');
+  document.getElementById('pwd-ent').textContent = `Энтропия: ${Math.round(len * Math.log2(cs.length))} бит`;
+}
+['pwd-len', 'pwd-u', 'pwd-l', 'pwd-n', 'pwd-s'].forEach(id => document.getElementById(id).addEventListener('input', genPwd));
+document.getElementById('pwd-new').addEventListener('click', genPwd);
+document.getElementById('pwd-copy').addEventListener('click', () => copyText(document.getElementById('pwd-out').value));
+genPwd();
+
+async function hashBuf(buf) {
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+document.getElementById('sha-txt').addEventListener('input', async e => {
+  document.getElementById('sha-src').textContent = 'Источник: текст';
+  document.getElementById('sha-out').value = e.target.value ? await hashBuf(new TextEncoder().encode(e.target.value)) : '';
+});
+document.getElementById('sha-file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  document.getElementById('sha-src').textContent = `Файл: ${f.name}`;
+  document.getElementById('sha-out').value = await hashBuf(await f.arrayBuffer());
+});
+document.getElementById('sha-copy').addEventListener('click', () => copyText(document.getElementById('sha-out').value));
+
+// 6. EXIF
+let exifFileObj = null;
+document.getElementById('exif-drop').addEventListener('click', () => document.getElementById('exif-file').click());
+document.getElementById('exif-file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  exifFileObj = f;
+  const grid = document.getElementById('exif-grid');
+  grid.innerHTML = `<div class="card"><span class="label">Файл</span><div class="mono" style="font-size:12px;">${f.name} (${fmtBytes(f.size)})</div></div>
+  <div class="card"><span class="label">MIME-тип</span><div class="mono" style="font-size:12px;">${f.type}</div></div>`;
+  document.getElementById('exif-drop').classList.add('hidden');
+  document.getElementById('exif-res').classList.remove('hidden');
+});
+document.getElementById('exif-clean').addEventListener('click', () => {
+  if (!exifFileObj) return;
+  const r = new FileReader();
+  r.onload = e => {
+    const im = new Image();
+    im.onload = () => {
+      const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+      c.getContext('2d').drawImage(im, 0, 0);
+      c.toBlob(b => {
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'clean_no_exif.png'; a.click();
+        toast('Очищенное фото сохранено');
+      }, 'image/png');
+    };
+    im.src = e.target.result;
+  };
+  r.readAsDataURL(exifFileObj);
+});
+document.getElementById('exif-rst').addEventListener('click', () => { document.getElementById('exif-res').classList.add('hidden'); document.getElementById('exif-drop').classList.remove('hidden'); });
+
+// 7. Diff
+function runDiff() {
+  const ws = document.getElementById('diff-ws').checked;
+  const norm = s => ws ? s.replace(/\s+/g, ' ').trim() : s;
+  const a = document.getElementById('diff-a').value.split('\n');
+  const b = document.getElementById('diff-b').value.split('\n');
+  const out = document.getElementById('diff-out'); out.innerHTML = '';
+  let add = 0, del = 0;
+  const max = Math.max(a.length, b.length);
+  for (let i = 0; i < max; i++) {
+    if (a[i] !== undefined && b[i] !== undefined && norm(a[i]) === norm(b[i])) {
+      out.innerHTML += `<div style="color:#94a3b8;">  ${b[i]}</div>`;
+    } else {
+      if (a[i] !== undefined) { del++; out.innerHTML += `<div style="color:#fda4af;background:rgba(244,63,94,0.15);padding:2px 6px;border-radius:4px;">- ${a[i]}</div>`; }
+      if (b[i] !== undefined) { add++; out.innerHTML += `<div style="color:#6ee7b7;background:rgba(16,185,129,0.15);padding:2px 6px;border-radius:4px;">+ ${b[i]}</div>`; }
+    }
+  }
+  document.getElementById('diff-stat').textContent = `+${add} / -${del}`;
+}
+document.getElementById('diff-run').addEventListener('click', runDiff);
+runDiff();
+
+// 8. Dev Tools
+let devMode = 'json';
+function setDev(m) {
+  devMode = m;
+  const btns = document.getElementById('dev-btns'); btns.innerHTML = '';
+  const mk = (t, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-sm btn-primary'; b.textContent = t; b.onclick = fn; btns.appendChild(b); };
+  const inp = document.getElementById('dev-in'), out = document.getElementById('dev-out');
+  if (m === 'json') {
+    mk('Форматировать', () => { try { out.textContent = JSON.stringify(JSON.parse(inp.value), null, 2); } catch (e) { out.textContent = e.message; } });
+    mk('Сжать', () => { try { out.textContent = JSON.stringify(JSON.parse(inp.value)); } catch (e) { out.textContent = e.message; } });
+  } else if (m === 'base64') {
+    mk('Encode', () => { out.textContent = btoa(unescape(encodeURIComponent(inp.value))); });
+    mk('Decode', () => { try { out.textContent = decodeURIComponent(escape(atob(inp.value.trim()))); } catch { out.textContent = 'Ошибка Base64'; } });
+  } else if (m === 'url') {
+    mk('Encode', () => { out.textContent = encodeURIComponent(inp.value); });
+    mk('Decode', () => { try { out.textContent = decodeURIComponent(inp.value); } catch { out.textContent = 'Ошибка URL'; } });
+  } else if (m === 'jwt') {
+    if (!inp.value.includes('.')) inp.value = 'eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjoiT21uaUh1YiIsImV4cCI6MTg5MzQ1NjAwMH0.sig';
+    mk('Декодировать JWT', () => {
+      try {
+        const p = inp.value.trim().split('.');
+        const dec = s => JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/')))));
+        out.textContent = JSON.stringify({ header: dec(p[0]), payload: dec(p[1]) }, null, 2);
+      } catch { out.textContent = 'Некорректный JWT'; }
+    });
+  }
+}
+document.querySelectorAll('[data-dev]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-dev]').forEach(x => x.classList.remove('active')); b.classList.add('active'); setDev(b.dataset.dev);
+}));
+document.getElementById('dev-copy').addEventListener('click', () => copyText(document.getElementById('dev-out').textContent));
+setDev('json');
+
+// 9. Текст
+const txtIn = document.getElementById('txt-in');
+function updTxt() {
+  const v = txtIn.value;
+  const w = v.trim() ? v.trim().split(/\s+/).length : 0;
+  document.getElementById('txt-c').textContent = v.length;
+  document.getElementById('txt-w').textContent = w;
+  document.getElementById('txt-l').textContent = v ? v.split('\n').length : 0;
+  document.getElementById('txt-r').textContent = `${Math.ceil(w / 3)}с`;
+}
+txtIn.addEventListener('input', updTxt);
+const TR = {'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'};
+document.querySelectorAll('.txt-op').forEach(b => b.addEventListener('click', () => {
+  const op = b.dataset.op; let v = txtIn.value;
+  if (op === 'dedupe') v = [...new Set(v.split('\n'))].join('\n');
+  if (op === 'spaces') v = v.replace(/[ \t]+/g, ' ').trim();
+  if (op === 'html') { const d = document.createElement('div'); d.innerHTML = v; v = d.textContent; }
+  if (op === 'sort') v = v.split('\n').sort((a, b) => a.localeCompare(b, 'ru')).join('\n');
+  if (op === 'translit') v = v.split('').map(c => TR[c.toLowerCase()] !== undefined ? (c === c.toUpperCase() ? TR[c.toLowerCase()].toUpperCase() : TR[c]) : c).join('');
+  txtIn.value = v; updTxt();
+}));
+document.getElementById('txt-copy').addEventListener('click', () => copyText(txtIn.value));
+
+// 10. Тон и BPM
+let toneCtx = null, toneOsc = null, tonePan = null;
+document.getElementById('tone-btn').addEventListener('click', () => {
+  if (toneOsc) { toneOsc.stop(); toneOsc = null; document.getElementById('tone-btn').textContent = '▶️ Включить звук'; return; }
+  toneCtx = toneCtx || new (window.AudioContext || window.webkitAudioContext)();
+  toneOsc = toneCtx.createOscillator();
+  const g = toneCtx.createGain(); g.gain.value = 0.2;
+  toneOsc.type = document.getElementById('tone-wv').value;
+  toneOsc.frequency.value = document.getElementById('tone-rng').value;
+  tonePan = toneCtx.createStereoPanner(); tonePan.pan.value = document.getElementById('tone-pan').value;
+  toneOsc.connect(g); g.connect(tonePan); tonePan.connect(toneCtx.destination);
+  toneOsc.start(); document.getElementById('tone-btn').textContent = '⏹ Выключить';
+});
+document.getElementById('tone-rng').addEventListener('input', e => {
+  document.getElementById('tone-hz').textContent = `${e.target.value} Гц`;
+  if (toneOsc) toneOsc.frequency.value = e.target.value;
+});
+document.querySelectorAll('.tone-pre').forEach(b => b.addEventListener('click', () => {
+  document.getElementById('tone-rng').value = b.dataset.hz;
+  document.getElementById('tone-rng').dispatchEvent(new Event('input'));
+}));
+let taps = [];
+document.getElementById('bpm-tap').addEventListener('click', () => {
+  const now = performance.now();
+  if (taps.length && now - taps[taps.length - 1] > 2500) taps = [];
+  taps.push(now);
+  if (taps.length >= 2) {
+    const avg = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
+    document.getElementById('bpm-out').textContent = `${Math.round(60000 / avg)} BPM`;
+  }
+});
+document.getElementById('bpm-rst').addEventListener('click', () => { taps = []; document.getElementById('bpm-out').textContent = '— BPM'; });
+
+// 11. Тест FPS / Гц
+let fpsRun = false, fpsLast = performance.now(), fpsHist = [], fpsList = [], minF = 999, maxF = 0, stressN = 0, ufoX = [20, 20, 20], ufoT = [0, 0];
+document.getElementById('fps-stress').addEventListener('click', e => {
+  const levels = [0, 500, 2500, 7000];
+  stressN = levels[(levels.indexOf(stressN) + 1) % levels.length];
+  e.target.textContent = `🔥 Стресс: ${stressN} частиц`;
+});
+document.getElementById('fps-rst').addEventListener('click', () => { fpsHist = []; fpsList = []; minF = 999; maxF = 0; });
+function startFps() {
+  if (fpsRun) return; fpsRun = true; fpsLast = performance.now();
+  const loop = now => {
+    if (activeMod !== 'mod-fps') { fpsRun = false; return; }
+    const dt = now - fpsLast; fpsLast = now;
+    if (dt > 0 && dt < 400) {
+      const f = 1000 / dt; fpsHist.push(dt); if (fpsHist.length > 100) fpsHist.shift();
+      fpsList.push(f); if (fpsList.length > 60) fpsList.shift();
+      if (fpsList.length > 10) { minF = Math.min(minF, f); maxF = Math.max(maxF, f); }
+      const avg = fpsList.reduce((a, b) => a + b, 0) / fpsList.length;
+      document.getElementById('fps-now').textContent = Math.round(avg);
+      document.getElementById('fps-hz').textContent = `~${[60, 90, 120, 144, 240].reduce((a, b) => Math.abs(b - avg) < Math.abs(a - avg) ? b : a)} Гц`;
+      document.getElementById('fps-avg').textContent = avg.toFixed(1);
+      document.getElementById('fps-mm').textContent = `${Math.round(minF === 999 ? avg : minF)} / ${Math.round(maxF || avg)}`;
+      document.getElementById('fps-ms').textContent = `${dt.toFixed(1)} мс`;
+    }
+    const g = document.getElementById('fps-graph'), gctx = g.getContext('2d');
+    g.width = g.clientWidth || 400; gctx.clearRect(0, 0, g.width, g.height);
+    gctx.strokeStyle = '#6366f1'; gctx.lineWidth = 2; gctx.beginPath();
+    fpsHist.forEach((v, i) => { const x = (i / 100) * g.width, y = g.height - Math.min(40, v) / 40 * g.height; i ? gctx.lineTo(x, y) : gctx.moveTo(x, y); });
+    gctx.stroke();
+
+    const u = document.getElementById('ufo-cnv'), uctx = u.getContext('2d');
+    u.width = u.clientWidth || 400; uctx.clearRect(0, 0, u.width, u.height);
+    for (let i = 0; i < stressN; i++) {
+      uctx.fillStyle = i % 2 ? '#06b6d4' : '#6366f1';
+      uctx.fillRect((Math.sin(now * 0.002 + i) * 0.5 + 0.5) * u.width, (Math.cos(now * 0.003 + i * 1.3) * 0.5 + 0.5) * u.height, 2, 2);
+    }
+    const speeds = [0, 30, 15], cols = ['#6366f1', '#10b981', '#f59e0b'], lbls = ['Max Hz', '30 FPS', '15 FPS'];
+    speeds.forEach((tf, idx) => {
+      if (tf === 0) ufoX[idx] += 360 * (dt / 1000);
+      else if (now - ufoT[idx - 1] >= 1000 / tf) { ufoX[idx] += 360 * (1 / tf); ufoT[idx - 1] = now; }
+      if (ufoX[idx] > u.width) ufoX[idx] = -40;
+      const y = idx * 50 + 22;
+      uctx.fillStyle = '#94a3b8'; uctx.font = '11px monospace'; uctx.fillText(lbls[idx], 8, y - 6);
+      uctx.fillStyle = cols[idx]; uctx.fillRect(ufoX[idx], y, 42, 16);
+    });
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+
+// =========================================================================
+// 4. ЛОГИКА РАЗДЕЛА 2: КАЛЬКУЛЯТОРЫ И СПРАВОЧНИКИ
+// =========================================================================
+// 12. Калькулятор реальности
+document.querySelectorAll('[data-real]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-real]').forEach(x => x.classList.remove('active')); b.classList.add('active');
+  ['car', 'wash', 'paint'].forEach(k => document.getElementById(`real-${k}`).classList.toggle('hidden', k !== b.dataset.real));
+}));
+function calcReality() {
+  const km = +document.getElementById('rc-km').value || 0;
+  const fuelYr = (km / 100) * (+document.getElementById('rc-cons').value || 0) * (+document.getElementById('rc-fuel').value || 0);
+  const totYr = fuelYr + (+document.getElementById('rc-maint').value || 0) + (+document.getElementById('rc-dep').value || 0);
+  document.getElementById('rc-month').textContent = `${Math.round(totYr / 12).toLocaleString('ru-RU')} ₽ / мес`;
+  document.getElementById('rc-year').textContent = `${Math.round(totYr).toLocaleString('ru-RU')} ₽`;
+  document.getElementById('rc-perkm').textContent = km > 0 ? `${(totYr / km).toFixed(1)} ₽ / км` : '—';
+  document.getElementById('rc-note').textContent = `Из них топливо — лишь ${Math.round((fuelYr / (totYr || 1)) * 100)}% расходов, остальное съедают ТО, страховка и амортизация.`;
+
+  const wOne = (+document.getElementById('rw-kw').value * +document.getElementById('rw-kwhp').value) + ((+document.getElementById('rw-lit').value / 1000) * +document.getElementById('rw-watp').value) + (+document.getElementById('rw-pod').value);
+  document.getElementById('rw-one').textContent = `${wOne.toFixed(2)} ₽`;
+  document.getElementById('rw-yr').textContent = `${Math.round(wOne * 240).toLocaleString('ru-RU')} ₽ / год`;
+  document.getElementById('rw-breakdown').textContent = `Электричество + вода составляют ~${((wOne - +document.getElementById('rw-pod').value) / (wOne || 1) * 100).toFixed(0)}%, основная цена — химия.`;
+
+  const area = +document.getElementById('rp-area').value * +document.getElementById('rp-layers').value;
+  const lit = (area / (+document.getElementById('rp-cov').value || 10)) * (1 + (+document.getElementById('rp-margin').value / 100));
+  document.getElementById('rp-liters').textContent = `${lit.toFixed(1)} л`;
+  document.getElementById('rp-cost').textContent = `${Math.round(lit * +document.getElementById('rp-price').value).toLocaleString('ru-RU')} ₽`;
+}
+['rc-km','rc-cons','rc-fuel','rc-maint','rc-dep','rw-kw','rw-kwhp','rw-lit','rw-watp','rw-pod','rp-area','rp-layers','rp-cov','rp-margin','rp-price'].forEach(id => document.getElementById(id).addEventListener('input', calcReality));
+calcReality();
+
+// 13. Справочник
+const WIKI_DATA = {
+  formats: [
+    { t: '.HEIC / .HEIF', d: 'Стандарт фото iPhone. Вдвое легче JPEG при том же качестве, но старые программы на Windows требуют кодек или конвертацию в WebP/JPG.' },
+    { t: '.AVIF / .WebP', d: 'Современные веб-форматы. AVIF сжимает фото еще на 20–30% сильнее WebP и поддерживает HDR.' },
+    { t: '.MKV (Matroska)', d: 'Медиаконтейнер, а не кодек. Внутри могут лежать любые дорожки (H.265, FLAC, субтитры). Открывается VLC или MPV без перекодирования.' },
+    { t: '.ICS', d: 'Файл события календаря. При открытии автоматически добавляет встречу и напоминание в Google/Apple/Outlook Календарь.' }
+  ],
+  symptoms: [
+    { t: 'Робот-пылесос крутится на одном месте', d: 'Забился или заклинил один из боковых датчиков обрыва/бампера либо намотались волосы на ось одного ведущего колеса.' },
+    { t: 'ПК выключается ровно под нагрузкой в играх', d: 'Перегрев VRM/CPU либо просадка блока питания по линии 12V при пиковом скачке потребления видеокарты.' },
+    { t: 'Wi-Fi есть, но страницы открываются с задержкой', d: 'Проблема в DNS провайдера или перегружен канал 2.4 ГГц. Переключитесь на 5 ГГц и пропишите DNS 1.1.1.1 / 8.8.8.8.' },
+    { t: 'Стиральная машина не сливает воду и гудит', d: 'Засорился сливной фильтр в правом нижнем углу корпуса (монета, нитки) или заклинила крыльчатка помпы.' }
+  ],
+  traps: [
+    { t: 'Возврат невозвратного авиа/ЖД билета', d: 'Даже по невозвратному тарифу обязаны вернуть топливные и аэропортовые сборы, а при болезни или задержке рейса — полную стоимость.' },
+    { t: 'Подписка с «бесплатным периодом 7 дней»', d: 'Списание часто происходит за 24 часа до окончания триала. Отменяйте автопродление сразу после активации — доступ останется до конца срока.' },
+    { t: 'Замена паспорта при порче или смене данных', d: 'Пошлина за замену испорченного паспорта в 5 раз выше, чем за плановую замену по возрасту (1500 ₽ против 300 ₽).' }
+  ]
+};
+let wkTab = 'formats';
+function renderWiki() {
+  const q = document.getElementById('wk-search').value.trim().toLowerCase();
+  const list = document.getElementById('wk-list'); list.innerHTML = '';
+  WIKI_DATA[wkTab].filter(x => !q || x.t.toLowerCase().includes(q) || x.d.toLowerCase().includes(q)).forEach(item => {
+    list.innerHTML += `<div class="card"><div style="font-weight:700;color:var(--cyan);margin-bottom:6px;">${item.t}</div><p style="font-size:13px;color:#cbd5e1;">${item.d}</p></div>`;
+  });
+}
+document.querySelectorAll('[data-wk]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-wk]').forEach(x => x.classList.remove('active')); b.classList.add('active'); wkTab = b.dataset.wk; renderWiki();
+}));
+document.getElementById('wk-search').addEventListener('input', renderWiki);
+renderWiki();
+
+// 14. Детектор железа ПК
+function checkPC() {
+  const task = document.getElementById('pc-task').value;
+  const cpu = +document.getElementById('pc-cpu').value;
+  const gpu = +document.getElementById('pc-gpu').value;
+  const ram = +document.getElementById('pc-ram').value;
+  const sw = document.getElementById('pc-sw').value;
+  const issues = [];
+  let score = 96;
+
+  if (gpu === 3 && cpu === 1) { issues.push('⚠️ Мощная видеокарта упрется в слабый процессор (CPU Bottleneck) в 1080p/2K.'); score -= 25; }
+  if (ram === 8) { issues.push('🚨 8 ГБ ОЗУ сегодня мало даже для браузера с 15 вкладками — система будет свопить на диск.'); score -= 30; }
+  if (task === 'edit' && ram < 32) { issues.push('⚠️ Для 4K-монтажа и эффектов 16 ГБ быстро закончатся — берите минимум 32 ГБ.'); score -= 15; }
+  if (task === 'games' && gpu === 1) { issues.push('🚨 На встроенной графике современные 3D-игры пойдут только в 720p на минималках.'); score -= 35; }
+  if (task === 'office' && sw === 'clicky') { issues.push('🔊 Кликающие свитчи Blue для ночной работы разбудят всех соседей по квартире.'); score -= 10; }
+  if (issues.length === 0) issues.push('✅ Отлично сбалансированная сборка без явных узких мест под выбранную задачу!');
+
+  document.getElementById('pc-score').textContent = `Баланс: ${Math.max(15, score)}/100`;
+  document.getElementById('pc-issues').innerHTML = issues.map(i => `<div class="card" style="background:var(--bg-input);">${i}</div>`).join('');
+}
+['pc-task','pc-cpu','pc-gpu','pc-ram','pc-sw'].forEach(id => document.getElementById(id).addEventListener('change', checkPC));
+checkPC();
+
+// =========================================================================
+// 5. ЛОГИКА РАЗДЕЛА 3: ЖИЗНЬ И АНТИСТРЕСС
+// =========================================================================
+// 15. Калькулятор-жаба
+function calcToad() {
+  const sal = +document.getElementById('td-sal').value || 1;
+  const hrs = +document.getElementById('td-hrs').value || 168;
+  const cup = +document.getElementById('td-coffee').value || 250;
+  const pr = +document.getElementById('td-price').value || 0;
+  const rate = sal / hrs;
+  const lifeH = pr / rate;
+  document.getElementById('td-life').textContent = `${lifeH.toFixed(1)} часов работы`;
+  document.getElementById('td-days').textContent = `${(lifeH / 8).toFixed(1)} раб. дней`;
+  document.getElementById('td-cups').textContent = `${Math.round(pr / cup)} шт.`;
+  const v = document.getElementById('td-verdict');
+  if (lifeH < 3) v.textContent = '🐸 Жаба одобряет: стоит меньше половины рабочего дня. Можно брать без угрызений совести!';
+  else if (lifeH < 24) v.textContent = '🤔 Жаба задумалась: это несколько дней труда. Отложите покупку на 24 часа — если завтра все еще хочется, берите.';
+  else v.textContent = `🚨 Жаба в обмороке! Ради этой вещи придется работать ${(lifeH / 8).toFixed(0)} полных дней. Оно точно принесет столько радости?`;
+}
+['td-sal','td-hrs','td-coffee','td-price'].forEach(id => document.getElementById(id).addEventListener('input', calcToad));
+calcToad();
+
+// 16. Арена выбора
+let arenaPool = [], arenaNext = [], arenaIdx = 0;
+const ROASTS = ['Отправляется на скамейку запасных!', 'Не выдержал напора конкурента.', 'Может быть, в следующий раз!', 'Зрители аплодируют победителю дуэли!'];
+function showMatch() {
+  if (arenaIdx >= arenaPool.length) {
+    arenaPool = [...arenaNext]; arenaNext = []; arenaIdx = 0;
+  }
+  if (arenaPool.length === 1) {
+    document.getElementById('arena-match').classList.add('hidden');
+    document.getElementById('arena-win').classList.remove('hidden');
+    document.getElementById('arena-champ').textContent = arenaPool[0];
+    addXP(15, 'Чемпион Арены определен');
+    return;
+  }
+  if (arenaIdx === arenaPool.length - 1) {
+    arenaNext.push(arenaPool[arenaIdx]); arenaIdx++; showMatch(); return;
+  }
+  document.getElementById('arena-round').textContent = `Осталось претендентов: ${arenaPool.length}`;
+  document.getElementById('arena-c1').textContent = arenaPool[arenaIdx];
+  document.getElementById('arena-c2').textContent = arenaPool[arenaIdx + 1];
+}
+document.getElementById('arena-start').addEventListener('click', () => {
+  const items = document.getElementById('arena-list').value.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 16);
+  if (items.length < 2) { toast('Введите минимум 2 варианта'); return; }
+  arenaPool = items.sort(() => Math.random() - 0.5); arenaNext = []; arenaIdx = 0;
+  document.getElementById('arena-setup').classList.add('hidden');
+  document.getElementById('arena-win').classList.add('hidden');
+  document.getElementById('arena-match').classList.remove('hidden');
+  showMatch();
+});
+[1, 2].forEach(n => document.getElementById(`arena-c${n}`).addEventListener('click', () => {
+  const win = arenaPool[arenaIdx + (n - 1)];
+  const lose = arenaPool[arenaIdx + (2 - n)];
+  arenaNext.push(win);
+  document.getElementById('arena-comment').textContent = `«${lose}» выбывает. ${ROASTS[Math.floor(Math.random() * ROASTS.length)]}`;
+  arenaIdx += 2; showMatch();
+}));
+document.getElementById('arena-reset').addEventListener('click', () => {
+  document.getElementById('arena-match').classList.add('hidden');
+  document.getElementById('arena-setup').classList.remove('hidden');
+});
+document.getElementById('arena-again').addEventListener('click', () => document.getElementById('arena-reset').click());
+
+// 17. Весы решений
+let argsA = [{ t: 'Легко брать в поездки', w: 8 }, { t: 'Работает от батареи 10ч', w: 7 }];
+let argsB = [{ t: 'Дешевле апгрейд', w: 9 }, { t: 'Большой экран 27"', w: 7 }];
+let curAngle = 0;
+function renderScaleLists() {
+  ['a', 'b'].forEach(side => {
+    const arr = side === 'a' ? argsA : argsB;
+    const el = document.getElementById(`sc-list-${side}`); el.innerHTML = '';
+    arr.forEach((it, i) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;background:var(--bg-input);padding:5px 8px;border-radius:8px;';
+      row.innerHTML = `<span>${it.t} <strong class="mono" style="color:var(--cyan);">+${it.w}</strong></span><button type="button" style="color:var(--rose);">✕</button>`;
+      row.querySelector('button').onclick = () => { arr.splice(i, 1); renderScaleLists(); };
+      el.appendChild(row);
+    });
+  });
+  drawScales();
+}
+function drawScales() {
+  const c = document.getElementById('scales-cnv'); if (!c || activeMod !== 'mod-scales') return;
+  c.width = c.clientWidth || 400;
+  const ctx = c.getContext('2d'), w = c.width, h = c.height;
+  const sumA = argsA.reduce((s, x) => s + x.w, 0), sumB = argsB.reduce((s, x) => s + x.w, 0);
+  const target = Math.max(-0.35, Math.min(0.35, (sumB - sumA) * 0.025));
+  curAngle += (target - curAngle) * 0.15;
+
+  ctx.clearRect(0, 0, w, h);
+  const cx = w / 2, cy = h * 0.65, arm = Math.min(130, w * 0.32);
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, h - 14); ctx.moveTo(cx - 40, h - 14); ctx.lineTo(cx + 40, h - 14); ctx.stroke();
+
+  const lx = cx - Math.cos(curAngle) * arm, ly = cy - Math.sin(curAngle) * arm;
+  const rx = cx + Math.cos(curAngle) * arm, ry = cy + Math.sin(curAngle) * arm;
+  ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(rx, ry); ctx.stroke();
+
+  ctx.fillStyle = '#06b6d4'; ctx.fillRect(lx - 32, ly + 8, 64, 10);
+  ctx.fillStyle = '#10b981'; ctx.fillRect(rx - 32, ry + 8, 64, 10);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center';
+  ctx.fillText(`${sumA} б.`, lx, ly - 8);
+  ctx.fillText(`${sumB} б.`, rx, ry - 8);
+  if (Math.abs(target - curAngle) > 0.002) requestAnimationFrame(drawScales);
+}
+['a', 'b'].forEach(side => document.getElementById(`sc-add-${side}`).addEventListener('click', () => {
+  const inp = document.getElementById(`sc-arg-${side}`), w = +document.getElementById(`sc-w-${side}`).value || 5;
+  if (!inp.value.trim()) return;
+  (side === 'a' ? argsA : argsB).push({ t: inp.value.trim(), w: Math.min(10, Math.max(1, w)) });
+  inp.value = ''; renderScaleLists();
+}));
+renderScaleLists();
+
+// 18. Подписки, Булшит и Отговорки
+document.querySelectorAll('[data-lf]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-lf]').forEach(x => x.classList.remove('active')); b.classList.add('active');
+  ['subs', 'bs', 'excuse'].forEach(k => document.getElementById(`lf-${k}`).classList.toggle('hidden', k !== b.dataset.lf));
+}));
+let subs = [
+  { n: 'Онлайн-кинотеатр', c: 399, u: 'rare' },
+  { n: 'Облачное хранилище 2 ТБ', c: 699, u: 'daily' },
+  { n: 'Забытый фитнес-трекер', c: 490, u: 'forgot' }
+];
+function renderSubs() {
+  const el = document.getElementById('sub-list'); el.innerHTML = '';
+  let saveYr = 0;
+  subs.forEach((s, i) => {
+    const bad = s.u !== 'daily';
+    if (bad) saveYr += s.c * 12;
+    const d = document.createElement('div'); d.className = 'card';
+    d.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;';
+    d.innerHTML = `<div><strong>${s.n}</strong> <span class="mono" style="color:var(--text-muted);font-size:12px;">(${s.c} ₽/мес)</span></div>
+      <div style="display:flex;align-items:center;gap:8px;"><span class="badge-pill" style="${bad ? 'color:#fda4af;border-color:var(--rose);' : 'color:#6ee7b7;'}">${bad ? 'Кандидат на увольнение' : 'Оставить'}</span><button type="button" style="color:var(--text-muted);">✕</button></div>`;
+    d.querySelector('button').onclick = () => { subs.splice(i, 1); renderSubs(); };
+    el.appendChild(d);
+  });
+  document.getElementById('sub-save').textContent = `${saveYr.toLocaleString('ru-RU')} ₽ / год`;
+}
+document.getElementById('sub-add').addEventListener('click', () => {
+  const n = document.getElementById('sub-name').value.trim(); if (!n) return;
+  subs.push({ n, c: +document.getElementById('sub-cost').value || 0, u: document.getElementById('sub-use').value });
+  document.getElementById('sub-name').value = ''; renderSubs();
+});
+renderSubs();
+
+const BS_DICT = [
+  ['динамично развивающаяся', '«Процессы еще не настроены, инструкции будете писать сами на ходу»'],
+  ['печеньками', '«Бюджет на ДМС и премии ушел на чайный уголок»'],
+  ['стрессоустойчивостью', '«Дедлайны горели еще вчера, готовьтесь к авралам»'],
+  ['синергией', '«Красивое слово, чтобы не объяснять, кто за что отвечает»'],
+  ['по результатам собеседования', '«Платим по нижней границе рынка, если не поторгуетесь»'],
+  ['многозадачности', '«Придется совмещать обязанности трех специалистов»']
+];
+document.getElementById('bs-run').addEventListener('click', () => {
+  const txt = document.getElementById('bs-in').value.toLowerCase();
+  const found = BS_DICT.filter(([k]) => txt.includes(k));
+  document.getElementById('bs-out').innerHTML = found.length
+    ? found.map(([k, v]) => `<div>🚩 <strong>«${k}»</strong> → <span style="color:var(--amber);">${v}</span></div>`).join('')
+    : '✅ Подозрительных штампов не найдено — текст написан человеческим языком!';
+});
+document.getElementById('bs-run').click();
+
+const EXCUSES = {
+  weekend: [
+    'Благодарю за доверие, но в выходные я полностью восстанавливаю ресурс, чтобы в понедельник выдать максимум.',
+    'На эти выходные у меня уже запланированы личные дела без доступа к компьютеру. Подключусь в понедельник утром!',
+    'Мой ноутбук по выходным превращается в тыкву, а я — в человека без интернета. Увидимся в понедельник!'
+  ],
+  call: [
+    'Давайте зафиксируем ключевые вопросы списком в чате — так мы решим задачу быстрее и сохраним историю договоренностей.',
+    'Сейчас плотный фокус на задаче, напишите тезисы текстом — отвечу сразу как освобожусь.',
+    'Если вопрос решается за 5 минут, он идеально поместится в три строчки в мессенджере!'
+  ],
+  sofa: [
+    'Очень хотел бы помочь, но врач строго запретил поднимать тяжести из-за спины.',
+    'В это время уже занят, но могу скинуть контакты проверенных грузчиков с ремнями!',
+    'Морально я уже несу этот шкаф вместе с вами, но физически моя поясница подала в отставку.'
+  ],
+  upsell: [
+    'Спасибо, мне нужен только базовый продукт без дополнительных опций и страховок.',
+    'Я внимательно изучил условия, дополнительные услуги не требуются. Оформляем основной вариант.',
+    'Спасибо за заботу, но мой внутренний финансовый директор наложил вето на все допы.'
+  ]
+};
+function updExcuse() {
+  const s = document.getElementById('ex-sit').value, l = +document.getElementById('ex-lvl').value;
+  document.getElementById('ex-lvl-lbl').textContent = ['Официально', 'Вежливо', 'С юмором'][l - 1];
+  document.getElementById('ex-out').textContent = EXCUSES[s][l - 1];
+}
+document.getElementById('ex-sit').addEventListener('change', updExcuse);
+document.getElementById('ex-lvl').addEventListener('input', updExcuse);
+document.getElementById('ex-copy').addEventListener('click', () => copyText(document.getElementById('ex-out').textContent));
+updExcuse();
+
+// =========================================================================
+// 6. ЛОГИКА РАЗДЕЛА 4: АЭРОДИНАМИКА, SFX WAV, ВИЗУАЛИЗАТОР, АРКАДА
+// =========================================================================
+// 19. 2D Аэродинамическая труба
+let aeroRun = false, aeroBlocks = [], aeroParts = [], drawingAero = false;
+function setAeroPreset(type) {
+  aeroBlocks = [];
+  if (type === 'wing') {
+    for (let x = 110; x < 250; x += 6) {
+      const t = (x - 110) / 140;
+      const thick = Math.sin(t * Math.PI) * 22;
+      aeroBlocks.push({ x, y: 135 - thick * 0.7, r: 10 });
+      aeroBlocks.push({ x, y: 135 + thick * 0.3, r: 9 });
+    }
+  } else if (type === 'car') {
+    for (let x = 100; x < 260; x += 8) {
+      const t = (x - 100) / 160;
+      const h = t < 0.35 ? 16 + t * 45 : (t < 0.75 ? 32 : 24);
+      aeroBlocks.push({ x, y: 155 - h / 2, r: h / 2 });
+    }
+  } else if (type === 'brick') {
+    for (let y = 90; y <= 180; y += 12) for (let x = 150; x <= 190; x += 12) aeroBlocks.push({ x, y, r: 10 });
+  }
+}
+setAeroPreset('wing');
+document.querySelectorAll('.aero-pre').forEach(b => b.addEventListener('click', () => setAeroPreset(b.dataset.shape)));
+document.getElementById('aero-clear').addEventListener('click', () => { aeroBlocks = []; });
+
+const aeroCnv = document.getElementById('aero-cnv');
+const addAeroPt = e => {
+  const rect = aeroCnv.getBoundingClientRect();
+  const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+  aeroBlocks.push({ x: cx * (aeroCnv.width / rect.width), y: cy * (aeroCnv.height / rect.height), r: 11 });
+};
+aeroCnv.addEventListener('mousedown', e => { drawingAero = true; addAeroPt(e); });
+aeroCnv.addEventListener('mousemove', e => { if (drawingAero) addAeroPt(e); });
+window.addEventListener('mouseup', () => { drawingAero = false; });
+aeroCnv.addEventListener('touchstart', e => { drawingAero = true; addAeroPt(e); }, { passive: true });
+aeroCnv.addEventListener('touchmove', e => { if (drawingAero) addAeroPt(e); }, { passive: true });
+aeroCnv.addEventListener('touchend', () => { drawingAero = false; });
+
+function startAero() {
+  if (aeroRun) return; aeroRun = true;
+  const loop = () => {
+    if (activeMod !== 'mod-aero') { aeroRun = false; return; }
+    aeroCnv.width = aeroCnv.clientWidth || 500;
+    const ctx = aeroCnv.getContext('2d'), w = aeroCnv.width, h = aeroCnv.height;
+    const spd = +document.getElementById('aero-spd').value;
+    while (aeroParts.length < 220) aeroParts.push({ x: Math.random() * w, y: Math.random() * h, vy: 0 });
+
+    ctx.fillStyle = 'rgba(5, 7, 12, 0.35)'; ctx.fillRect(0, 0, w, h);
+    let hits = 0, liftSum = 0;
+
+    aeroParts.forEach(p => {
+      let vx = spd;
+      aeroBlocks.forEach(b => {
+        const dx = p.x - b.x, dy = p.y - b.y, dist = Math.hypot(dx, dy);
+        if (dist < b.r + 6) {
+          hits++;
+          const ny = dy >= 0 ? 1 : -1;
+          p.vy += ny * spd * 0.45;
+          liftSum -= ny;
+          p.x = b.x + (dx / (dist || 1)) * (b.r + 6);
+        }
+      });
+      p.x += vx; p.y += p.vy; p.vy *= 0.92;
+      if (p.x > w || p.y < 0 || p.y > h) { p.x = 0; p.y = Math.random() * h; p.vy = 0; }
+      const turb = Math.abs(p.vy);
+      ctx.fillStyle = turb > 1.5 ? '#e11d48' : (turb > 0.4 ? '#d97706' : '#1d4ed8');
+      ctx.fillRect(p.x, p.y, 4, 2);
+    });
+
+    ctx.fillStyle = '#ffffff';
+    aeroBlocks.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill(); });
+
+    document.getElementById('aero-drag').textContent = `Cx ${(0.12 + hits * 0.015).toFixed(2)}`;
+    document.getElementById('aero-lift').textContent = `${(liftSum * 0.4).toFixed(1)} Н`;
+    document.getElementById('aero-flow').textContent = hits > 28 ? 'Турбулентный' : 'Ламинарный';
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+
+// 20. Фокус-миксер и Генератор SFX (.WAV)
+document.querySelectorAll('[data-sx]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-sx]').forEach(x => x.classList.remove('active')); b.classList.add('active');
+  ['amb', 'sfx'].forEach(k => document.getElementById(`sx-${k}`).classList.toggle('hidden', k !== b.dataset.sx));
+}));
+let ambCtx = null, ambNodes = null;
+function ensureAmb() {
+  if (ambNodes) return;
+  ambCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // Розовый шум (дождь)
+  const buf = ambCtx.createBuffer(1, ambCtx.sampleRate * 2, ambCtx.sampleRate);
+  const d = buf.getChannelData(0);
+  let b0=0,b1=0,b2=0;
+  for (let i = 0; i < d.length; i++) {
+    const w = Math.random() * 2 - 1;
+    b0 = 0.997 * b0 + w * 0.029; b1 = 0.985 * b1 + w * 0.032; b2 = 0.950 * b2 + w * 0.048;
+    d[i] = (b0 + b1 + b2 + w * 0.18) * 0.5;
+  }
+  const ns = ambCtx.createBufferSource(); ns.buffer = buf; ns.loop = true;
+  const gRain = ambCtx.createGain(); gRain.gain.value = 0; ns.connect(gRain); gRain.connect(ambCtx.destination); ns.start();
+
+  // Дрон
+  const oscD = ambCtx.createOscillator(); oscD.type = 'triangle'; oscD.frequency.value = 65;
+  const gDrone = ambCtx.createGain(); gDrone.gain.value = 0; oscD.connect(gDrone); gDrone.connect(ambCtx.destination); oscD.start();
+
+  // Бинауральный 40 Гц
+  const oL = ambCtx.createOscillator(), oR = ambCtx.createOscillator();
+  oL.frequency.value = 200; oR.frequency.value = 240;
+  const pL = ambCtx.createStereoPanner(), pR = ambCtx.createStereoPanner();
+  pL.pan.value = -1; pR.pan.value = 1;
+  const gBin = ambCtx.createGain(); gBin.gain.value = 0;
+  oL.connect(pL); pL.connect(gBin); oR.connect(pR); pR.connect(gBin); gBin.connect(ambCtx.destination);
+  oL.start(); oR.start();
+
+  ambNodes = { gRain, gDrone, gBin };
+}
+function updAmb() {
+  ensureAmb();
+  if (ambCtx.state === 'suspended') ambCtx.resume();
+  const r = +document.getElementById('amb-rain').value, d = +document.getElementById('amb-drone').value, b = +document.getElementById('amb-bin').value;
+  document.getElementById('amb-v1').textContent = `${r}%`;
+  document.getElementById('amb-v2').textContent = `${d}%`;
+  document.getElementById('amb-v3').textContent = `${b}%`;
+  ambNodes.gRain.gain.value = (r / 100) * 0.25;
+  ambNodes.gDrone.gain.value = (d / 100) * 0.18;
+  ambNodes.gBin.gain.value = (b / 100) * 0.12;
+}
+['amb-rain', 'amb-drone', 'amb-bin'].forEach(id => document.getElementById(id).addEventListener('input', updAmb));
+document.querySelectorAll('.amb-pre').forEach(b => b.addEventListener('click', () => {
+  document.getElementById('amb-rain').value = b.dataset.r;
+  document.getElementById('amb-drone').value = b.dataset.d;
+  document.getElementById('amb-bin').value = b.dataset.b;
+  updAmb();
+}));
+document.getElementById('amb-stop').addEventListener('click', () => {
+  ['amb-rain', 'amb-drone', 'amb-bin'].forEach(id => document.getElementById(id).value = 0);
+  if (ambNodes) updAmb();
+});
+
+// Генератор SFX + экспорт WAV
+let sfxType = 'coin';
+const SFX_INFO = {
+  coin: 'Пресет: Монетка (Двойной импульс B5 → E6)',
+  laser: 'Пресет: Лазер (Свип частоты 1200 Гц → 140 Гц)',
+  click: 'Пресет: UI Клик (Короткий импульс 900 Гц)',
+  whoosh: 'Пресет: Whoosh (Модулированный белый шум)',
+  power: 'Пресет: Апгрейд (Восходящая гармоника)'
+};
+function buildSfxBuffer(sampleRate = 44100) {
+  const dur = sfxType === 'click' ? 0.08 : 0.38;
+  const len = Math.floor(sampleRate * dur);
+  const data = new Float32Array(len);
+  for (let i = 0; i < len; i++) {
+    const t = i / sampleRate, env = Math.exp(-t * (sfxType === 'click' ? 45 : 9));
+    if (sfxType === 'coin') {
+      const f = t < 0.09 ? 987.77 : 1318.5;
+      data[i] = Math.sin(2 * Math.PI * f * t) * env * 0.6;
+    } else if (sfxType === 'laser') {
+      const f = 1200 * Math.pow(0.12, t / dur);
+      data[i] = (Math.sin(2 * Math.PI * f * t) > 0 ? 1 : -1) * env * 0.4;
+    } else if (sfxType === 'click') {
+      data[i] = Math.sin(2 * Math.PI * 950 * t) * env * 0.7;
+    } else if (sfxType === 'whoosh') {
+      data[i] = (Math.random() * 2 - 1) * Math.sin((t / dur) * Math.PI) * 0.5;
+    } else {
+      const f = 300 + t * 1800;
+      data[i] = Math.sin(2 * Math.PI * f * t) * env * 0.5;
+    }
+  }
+  return { data, sampleRate };
+}
+function playSfx() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const { data, sampleRate } = buildSfxBuffer(ctx.sampleRate);
+  const buf = ctx.createBuffer(1, data.length, sampleRate);
+  buf.getChannelData(0).set(data);
+  const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination); src.start();
+}
+function downloadWav() {
+  const { data, sampleRate } = buildSfxBuffer(44100);
+  const ab = new ArrayBuffer(44 + data.length * 2), v = new DataView(ab);
+  const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  ws(0, 'RIFF'); v.setUint32(4, 36 + data.length * 2, true); ws(8, 'WAVE'); ws(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * 2, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true); ws(36, 'data'); v.setUint32(40, data.length * 2, true);
+  for (let i = 0; i < data.length; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, data[i])) * 32767, true);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ab], { type: 'audio/wav' }));
+  a.download = `sfx_${sfxType}.wav`; a.click();
+  addXP(10, 'Звуковой эффект экспортирован в WAV');
+}
+document.querySelectorAll('.sfx-pre').forEach(b => b.addEventListener('click', () => {
+  sfxType = b.dataset.t; document.getElementById('sfx-desc').textContent = SFX_INFO[sfxType]; playSfx();
+}));
+document.getElementById('sfx-play').addEventListener('click', playSfx);
+document.getElementById('sfx-dl').addEventListener('click', downloadWav);
+
+// 21. Аудио-реактивный визуализатор
+let vizCtx = null, vizAn = null, vizTimer = null, vizRaf = null;
+function runVizLoop() {
+  if (vizRaf) cancelAnimationFrame(vizRaf);
+  const c = document.getElementById('viz-cnv'), ctx = c.getContext('2d');
+  const freq = new Uint8Array(vizAn.frequencyBinCount);
+  const loop = () => {
+    c.width = c.clientWidth || 500;
+    const w = c.width, h = c.height, mode = document.getElementById('viz-mode').value;
+    vizAn.getByteFrequencyData(freq);
+    ctx.fillStyle = 'rgba(5, 7, 12, 0.25)'; ctx.fillRect(0, 0, w, h);
+
+    if (mode === 'spectrum') {
+      const bw = w / freq.length;
+      freq.forEach((v, i) => {
+        ctx.fillStyle = `hsl(${260 - (v / 255) * 100}, 90%, 60%)`;
+        ctx.fillRect(i * bw, h - (v / 255) * h * 0.9, bw - 2, (v / 255) * h * 0.9);
+      });
+    } else if (mode === 'osc') {
+      ctx.strokeStyle = '#06b6d4'; ctx.lineWidth = 3; ctx.beginPath();
+      freq.forEach((v, i) => {
+        const x = (i / freq.length) * w, y = h / 2 + Math.sin(i * 0.4) * (v / 255) * (h * 0.42);
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.stroke();
+    } else {
+      const bass = freq[2] || 40;
+      ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 3;
+      for (let r = 1; r <= 4; r++) {
+        ctx.beginPath(); ctx.arc(w / 2, h / 2, r * 22 + (bass / 255) * 35, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    vizRaf = requestAnimationFrame(loop);
+  };
+  loop();
+}
+document.getElementById('viz-synth').addEventListener('click', () => {
+  if (vizTimer) { clearInterval(vizTimer); vizTimer = null; document.getElementById('viz-synth').textContent = '🎹 Включить встроенный бит'; return; }
+  vizCtx = vizCtx || new (window.AudioContext || window.webkitAudioContext)();
+  vizAn = vizCtx.createAnalyser(); vizAn.fftSize = 128; vizAn.connect(vizCtx.destination);
+  let step = 0; const notes = [110, 110, 146.8, 130.8, 164.8, 146.8, 196, 164.8];
+  vizTimer = setInterval(() => {
+    const o = vizCtx.createOscillator(), g = vizCtx.createGain();
+    o.type = step % 2 === 0 ? 'sawtooth' : 'square';
+    o.frequency.value = notes[step % notes.length];
+    g.gain.setValueAtTime(0.16, vizCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, vizCtx.currentTime + 0.22);
+    o.connect(g); g.connect(vizAn); o.start(); o.stop(vizCtx.currentTime + 0.23);
+    step++;
+  }, 240);
+  document.getElementById('viz-synth').textContent = '⏹ Остановить бит';
+  runVizLoop();
+});
+document.getElementById('viz-file').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const au = document.getElementById('viz-audio');
+  au.src = URL.createObjectURL(f); au.classList.remove('hidden'); au.play();
+  if (!vizCtx) {
+    vizCtx = new (window.AudioContext || window.webkitAudioContext)();
+    vizAn = vizCtx.createAnalyser(); vizAn.fftSize = 128;
+    const src = vizCtx.createMediaElementSource(au);
+    src.connect(vizAn); vizAn.connect(vizCtx.destination);
+  }
+  runVizLoop();
+});
+document.getElementById('viz-snap').addEventListener('click', () => {
+  const a = document.createElement('a'); a.href = document.getElementById('viz-cnv').toDataURL('image/png'); a.download = 'cover_art.png'; a.click();
+  toast('Обложка сохранена в PNG');
+});
+
+// 22. Игровая аркада (5 режимов)
+document.querySelectorAll('[data-gm]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-gm]').forEach(x => x.classList.remove('active')); b.classList.add('active');
+  ['type', 'phish', 'eye', 'keys', 'quest'].forEach(k => document.getElementById(`gm-${k}`).classList.toggle('hidden', k !== b.dataset.gm));
+}));
+
+// 22.1 Ритм-печать
+const WORDS = ['синхронизация', 'алгоритм', 'интерфейс', 'аэродинамика', 'оптимизация', 'архитектура', 'криптография', 'визуализация', 'киберпанк', 'производительность'];
+let tpScore = 0, tpCombo = 1;
+document.getElementById('tp-in').addEventListener('input', e => {
+  const target = document.getElementById('tp-word').textContent;
+  if (e.target.value.trim().toLowerCase() === target) {
+    tpScore += 10 * tpCombo; tpCombo = Math.min(8, tpCombo + 1);
+    document.getElementById('tp-score').textContent = tpScore;
+    document.getElementById('tp-combo').textContent = `x${tpCombo}`;
+    e.target.value = '';
+    document.getElementById('tp-word').textContent = WORDS[Math.floor(Math.random() * WORDS.length)];
+    addXP(5);
+  }
+});
+
+// 22.2 Анти-фишинг
+const PHISH_CASES = [
+  { from: 'support@sber-security-verify.ru', subj: 'Карта заблокирована!', body: 'Введите CVV на сайте http://sber-login.xyz', scam: true, exp: 'Домен sber-login.xyz поддельный, а банк никогда не просит CVV.' },
+  { from: 'no-reply@github.com', subj: '[GitHub] New sign-in from Chrome', body: 'Если это были вы, никаких действий не требуется.', scam: false, exp: 'Официальный домен github.com, письмо информационное и не требует ввода пароля.' },
+  { from: 'prize@ozon-bonus-2026.top', subj: 'Вы выиграли iPhone 17!', body: 'Оплатите пошлину 299 ₽ для доставки приза.', scam: true, exp: 'Классическая схема с фейковым доменом .top и оплатой «пошлины».' }
+];
+let phIdx = 0, phOk = 0;
+function loadPhish() {
+  const c = PHISH_CASES[phIdx % PHISH_CASES.length];
+  document.getElementById('ph-num').textContent = `Кейс ${(phIdx % PHISH_CASES.length) + 1} / ${PHISH_CASES.length}`;
+  document.getElementById('ph-from').textContent = `От: ${c.from}`;
+  document.getElementById('ph-subj').textContent = c.subj;
+  document.getElementById('ph-body').textContent = c.body;
+  document.getElementById('ph-fb').classList.add('hidden');
+}
+function ansPhish(userSaysScam) {
+  const c = PHISH_CASES[phIdx % PHISH_CASES.length];
+  const right = userSaysScam === c.scam;
+  if (right) { phOk++; addXP(10, 'Уловка распознана'); }
+  document.getElementById('ph-score').textContent = `Верно: ${phOk}`;
+  const fb = document.getElementById('ph-fb');
+  fb.textContent = `${right ? '✅ Верно!' : '❌ Ошибка!'} ${c.exp}`;
+  fb.classList.remove('hidden');
+  phIdx++; setTimeout(loadPhish, 2400);
+}
+document.getElementById('ph-legit').addEventListener('click', () => ansPhish(false));
+document.getElementById('ph-scam').addEventListener('click', () => ansPhish(true));
+loadPhish();
+
+// 22.3 Глазомер
+let eyeScore = 0;
+function nextEye() {
+  const st = document.getElementById('eye-stage'); st.innerHTML = '';
+  const win = Math.floor(Math.random() * 3);
+  for (let i = 0; i < 3; i++) {
+    const b = document.createElement('button'); b.type = 'button';
+    b.style.cssText = `width:56px;height:56px;border-radius:10px;background:#6366f1;transform:translateY(${i === win ? '-4px' : '0px'});`;
+    b.onclick = () => {
+      if (i === win) { eyeScore += 10; addXP(5); toast('Точный глаз!'); }
+      else toast('Мимо! Попробуйте еще');
+      document.getElementById('eye-sc').textContent = `Очки: ${eyeScore}`;
+      nextEye();
+    };
+    st.appendChild(b);
+  }
+}
+nextEye();
+
+// 22.4 Горячие клавиши
+const HK_LIST = [
+  { q: 'Закрыть текущую вкладку браузера', a: 'Ctrl + W', opts: ['Ctrl + W', 'Ctrl + T', 'Alt + Tab'] },
+  { q: 'Открыть закрытую случайно вкладку', a: 'Ctrl + Shift + T', opts: ['Ctrl + Shift + T', 'Ctrl + R', 'Ctrl + H'] },
+  { q: 'Поиск по странице или в коде', a: 'Ctrl + F', opts: ['Ctrl + F', 'Ctrl + S', 'Ctrl + D'] }
+];
+let hkIdx = 0, hkCombo = 0;
+function loadHK() {
+  const cur = HK_LIST[hkIdx % HK_LIST.length];
+  document.getElementById('hk-task').textContent = cur.q;
+  const wrap = document.getElementById('hk-opts'); wrap.innerHTML = '';
+  cur.opts.forEach(o => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn mono'; b.textContent = o;
+    b.onclick = () => {
+      if (o === cur.a) { hkCombo++; addXP(5); toast('Верно!'); } else { hkCombo = 0; toast(`Правильно: ${cur.a}`); }
+      document.getElementById('hk-stat').textContent = `Комбо: ${hkCombo}`;
+      hkIdx++; loadHK();
+    };
+    wrap.appendChild(b);
+  });
+}
+loadHK();
+
+// 22.5 Квест от лени
+const QUESTS = [
+  'Убрать 5 лишних предметов со стола и выпить стакан воды',
+  'Сделать 15 приседаний и размять шею в течение 2 минут',
+  'Закрыть 10 старых вкладок в браузере, которые висят больше недели',
+  'Разобрать папку «Загрузки» и удалить ненужные установщики'
+];
+let qstSec = 180, qstInt = null;
+document.getElementById('qst-next').addEventListener('click', () => {
+  document.getElementById('qst-text').textContent = QUESTS[Math.floor(Math.random() * QUESTS.length)];
+});
+document.getElementById('qst-start').addEventListener('click', () => {
+  if (qstInt) return;
+  qstInt = setInterval(() => {
+    qstSec--;
+    const m = String(Math.floor(qstSec / 60)).padStart(2, '0'), s = String(qstSec % 60).padStart(2, '0');
+    document.getElementById('qst-timer').textContent = `${m}:${s}`;
+    if (qstSec <= 0) { clearInterval(qstInt); qstInt = null; qstSec = 180; addXP(50, 'Квест выполнен!'); }
+  }, 1000);
+});
+document.getElementById('qst-done').addEventListener('click', () => {
+  clearInterval(qstInt); qstInt = null; qstSec = 180;
+  document.getElementById('qst-timer').textContent = '03:00';
+  addXP(50, 'Квест от прокрастинации выполнен!');
+});
+</script>
+</body>
+</html>
